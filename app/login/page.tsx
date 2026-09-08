@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
   // Form state
@@ -127,7 +128,7 @@ export default function LoginPage() {
           </div>
 
           {/* Social Authentication */}
-          <button
+          <button onClick={() => signIn("google",{ callbackUrl: "/dashboard" })}
             type="button"
             className="w-full bg-slate-900/60 hover:bg-slate-800/90 text-slate-200 border border-slate-700/60 hover:border-slate-600 rounded-xl py-3 px-4 flex items-center justify-center gap-3 font-medium transition-all duration-200 text-sm shadow-sm cursor-pointer group mb-6"
           >
@@ -356,4 +357,4 @@ export default function LoginPage() {
       </footer>
     </div>
   );
-}
+}
