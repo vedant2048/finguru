@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react"
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   // Form state
@@ -16,12 +16,10 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Authentication logic can be integrated here in the future
   };
 
   // Mouse-based 3D tilt effect for desktop views
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Disable effect on touch/mobile devices or small screens
     if (typeof window !== "undefined" && window.innerWidth < 768) return;
 
     const card = cardRef.current;
@@ -34,9 +32,8 @@ export default function LoginPage() {
     const mouseX = e.clientX - centerX;
     const mouseY = e.clientY - centerY;
 
-    // Calculate rotation with max ~5 degrees
-    const rotateX = (-mouseY / (rect.height / 2)) * 5;
-    const rotateY = (mouseX / (rect.width / 2)) * 5;
+    const rotateX = (-mouseY / (rect.height / 2)) * 4;
+    const rotateY = (mouseX / (rect.width / 2)) * 4;
 
     card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
   };
@@ -50,42 +47,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-[#07090e] min-h-screen text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans select-none selection:bg-blue-500 selection:text-white">
-      {/* Subtle background ambient glowing orbs */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="bg-[#12100E] min-h-screen text-[#FFFEE5] flex flex-col justify-between relative overflow-hidden font-sans select-none">
       {/* Header Section */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between relative z-20">
         {/* Wealthzy Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group focus:outline-none">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 p-[1px] shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all duration-300">
-            <div className="w-full h-full bg-[#0b0f19] rounded-[11px] flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform duration-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-                />
-              </svg>
-            </div>
+          <div className="w-10 h-10 rounded-xl bg-[#201C18] border border-[#3B332B] flex items-center justify-center shadow-sm group-hover:border-[#F88D50] transition-colors duration-200">
+            <svg
+              className="w-5 h-5 text-[#F88D50] group-hover:scale-105 transition-transform duration-200"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 6l4.5 12L12 9l4.5 9L21 6"
+              />
+            </svg>
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-white">
-            Wealth<span className="text-blue-500">zy</span>
+          <span className="text-xl font-extrabold tracking-tight text-[#FFFEE5]">
+            Wealth<span className="text-[#F88D50]">zy</span>
           </span>
         </Link>
 
         {/* Back to Home Link */}
         <Link
           href="/"
-          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors duration-200 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700 px-4 py-2 rounded-full backdrop-blur-md"
+          className="flex items-center gap-2 text-xs font-semibold text-[#C7BDB3] hover:text-[#FFFEE5] transition-colors duration-200 bg-[#201C18] border border-[#3B332B] hover:border-[#F88D50]/50 px-4 py-2 rounded-full"
         >
           <svg
             className="w-4 h-4"
@@ -106,31 +96,32 @@ export default function LoginPage() {
 
       {/* Main Container */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 relative z-10 my-auto">
-        {/* Glassmorphism Login Card */}
+        {/* Solid Login Card */}
         <section
           ref={cardRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="glass-card animate-fade-in w-full max-w-md rounded-2xl p-7 md:p-9 shadow-2xl relative border border-slate-800/80 transition-transform duration-150 ease-out"
+          className="w-full max-w-md rounded-2xl p-7 md:p-9 shadow-xl relative bg-[#181512] border border-[#3B332B] transition-transform duration-150 ease-out"
           style={{ transformStyle: "preserve-3d" }}
         >
           {/* Top Badge & Titles */}
           <div className="text-center mb-7">
-            <span className="inline-block text-[11px] font-extrabold tracking-widest text-blue-400 uppercase bg-blue-500/10 border border-blue-500/20 px-3.5 py-1 rounded-full mb-3 shadow-inner">
+            <span className="inline-block text-[11px] font-extrabold tracking-widest text-[#F88D50] uppercase bg-[#201C18] border border-[#3B332B] px-3.5 py-1 rounded-full mb-3">
               WELCOME BACK
             </span>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-[#FFFEE5] tracking-tight">
               Login to Wealthzy
             </h1>
-            <p className="text-xs md:text-sm text-slate-400 mt-1.5 font-normal">
+            <p className="text-xs md:text-sm text-[#C7BDB3] mt-1.5 font-normal">
               Access your intelligent financial dashboard
             </p>
           </div>
 
           {/* Social Authentication */}
-          <button onClick={() => signIn("google",{ callbackUrl: "/dashboard" })}
+          <button
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             type="button"
-            className="w-full bg-slate-900/60 hover:bg-slate-800/90 text-slate-200 border border-slate-700/60 hover:border-slate-600 rounded-xl py-3 px-4 flex items-center justify-center gap-3 font-medium transition-all duration-200 text-sm shadow-sm cursor-pointer group mb-6"
+            className="w-full bg-[#201C18] hover:bg-[#28231E] text-[#FFFEE5] border border-[#3B332B] hover:border-[#F88D50]/50 rounded-xl py-3 px-4 flex items-center justify-center gap-3 font-medium transition-all duration-200 text-sm shadow-sm cursor-pointer group mb-6"
           >
             {/* Google Logo SVG */}
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -156,11 +147,11 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center my-6 gap-3">
-            <div className="h-px bg-slate-800/80 flex-1" />
-            <span className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold px-1">
+            <div className="h-px bg-[#3B332B] flex-1" />
+            <span className="text-[11px] uppercase tracking-widest text-[#8C8176] font-semibold px-1">
               or
             </span>
-            <div className="h-px bg-slate-800/80 flex-1" />
+            <div className="h-px bg-[#3B332B] flex-1" />
           </div>
 
           {/* Login Form */}
@@ -169,14 +160,13 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                className="block text-xs font-semibold text-[#C7BDB3] uppercase tracking-wider mb-2"
               >
                 Email address
               </label>
-              <div className="relative input-recessed rounded-xl flex items-center shadow-inner group">
-                {/* Mail Icon SVG */}
+              <div className="relative bg-[#201C18] border border-[#3B332B] focus-within:border-[#F88D50] rounded-xl flex items-center shadow-sm group transition-colors">
                 <svg
-                  className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none group-focus-within:text-blue-400 transition-colors"
+                  className="w-5 h-5 text-[#8C8176] absolute left-3.5 pointer-events-none group-focus-within:text-[#F88D50] transition-colors"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -195,7 +185,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="name@company.com"
-                  className="w-full bg-transparent text-white placeholder-slate-500 text-sm py-3.5 pl-11 pr-4 rounded-xl outline-none focus:ring-0"
+                  className="w-full bg-transparent text-[#FFFEE5] placeholder-[#8C8176] text-sm py-3.5 pl-11 pr-4 rounded-xl outline-none"
                 />
               </div>
             </div>
@@ -205,21 +195,20 @@ export default function LoginPage() {
               <div className="flex justify-between items-center mb-2">
                 <label
                   htmlFor="password"
-                  className="block text-xs font-semibold text-slate-300 uppercase tracking-wider"
+                  className="block text-xs font-semibold text-[#C7BDB3] uppercase tracking-wider"
                 >
                   Password
                 </label>
                 <Link
                   href="#"
-                  className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs font-medium text-[#F88D50] hover:underline"
                 >
                   Forgot password?
                 </Link>
               </div>
-              <div className="relative input-recessed rounded-xl flex items-center shadow-inner group">
-                {/* Lock Icon SVG */}
+              <div className="relative bg-[#201C18] border border-[#3B332B] focus-within:border-[#F88D50] rounded-xl flex items-center shadow-sm group transition-colors">
                 <svg
-                  className="w-5 h-5 text-slate-400 absolute left-3.5 pointer-events-none group-focus-within:text-blue-400 transition-colors"
+                  className="w-5 h-5 text-[#8C8176] absolute left-3.5 pointer-events-none group-focus-within:text-[#F88D50] transition-colors"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -238,17 +227,16 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full bg-transparent text-white placeholder-slate-500 text-sm py-3.5 pl-11 pr-11 rounded-xl outline-none focus:ring-0"
+                  className="w-full bg-transparent text-[#FFFEE5] placeholder-[#8C8176] text-sm py-3.5 pl-11 pr-11 rounded-xl outline-none"
                 />
                 {/* Visibility Toggle Button */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3.5 text-slate-400 hover:text-slate-200 transition-colors p-1 cursor-pointer focus:outline-none"
+                  className="absolute right-3.5 text-[#8C8176] hover:text-[#FFFEE5] transition-colors p-1 cursor-pointer focus:outline-none"
                 >
                   {showPassword ? (
-                    /* Eye Off Icon SVG (visibility_off) */
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -263,7 +251,6 @@ export default function LoginPage() {
                       />
                     </svg>
                   ) : (
-                    /* Eye Icon SVG (visibility) */
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -287,13 +274,12 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Sapphire Blue Gradient Submit Button */}
+            {/* Solid Coral Submit Button */}
             <button
               type="submit"
-              className="sapphire-gradient-bg w-full py-3.5 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-2 text-sm tracking-wide shadow-lg cursor-pointer transition-all duration-300 mt-2 group"
+              className="w-full bg-[#F88D50] hover:bg-[#E77B3C] py-3.5 px-6 rounded-xl font-semibold text-white flex items-center justify-center gap-2 text-sm tracking-wide shadow-md cursor-pointer transition-all duration-200 mt-2 group"
             >
               <span>Sign In</span>
-              {/* Arrow Icon SVG */}
               <svg
                 className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"
                 fill="none"
@@ -311,21 +297,20 @@ export default function LoginPage() {
           </form>
 
           {/* Account Creation Footer */}
-          <div className="text-center text-xs text-slate-400 mt-6 pt-4 border-t border-slate-800/60 font-medium">
+          <div className="text-center text-xs text-[#C7BDB3] mt-6 pt-4 border-t border-[#3B332B] font-medium">
             Don&apos;t have an account?{" "}
             <Link
               href="#"
-              className="text-blue-400 hover:text-blue-300 font-semibold transition-colors ml-1"
+              className="text-[#F88D50] hover:underline font-semibold ml-1"
             >
               Create an account
             </Link>
           </div>
 
           {/* Security & Shield Badge */}
-          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500 mt-5 tracking-wide font-medium text-center">
-            {/* Shield Icon SVG */}
+          <div className="flex items-center justify-center gap-2 text-[11px] text-[#8C8176] mt-5 tracking-wide font-medium text-center">
             <svg
-              className="w-4 h-4 text-emerald-500/80"
+              className="w-4 h-4 text-[#5AC58E]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -343,14 +328,14 @@ export default function LoginPage() {
       </main>
 
       {/* Page Footer */}
-      <footer className="w-full max-w-7xl mx-auto px-6 py-4 text-center text-xs text-slate-500 relative z-20">
+      <footer className="w-full max-w-7xl mx-auto px-6 py-4 text-center text-xs text-[#8C8176] relative z-20">
         <p>
           &copy; {new Date().getFullYear()} Wealthzy. All rights reserved. &bull;{" "}
-          <Link href="#" className="hover:text-slate-400 transition-colors">
+          <Link href="#" className="hover:text-[#C7BDB3] transition-colors">
             Privacy Policy
           </Link>{" "}
           &bull;{" "}
-          <Link href="#" className="hover:text-slate-400 transition-colors">
+          <Link href="#" className="hover:text-[#C7BDB3] transition-colors">
             Terms of Service
           </Link>
         </p>
