@@ -300,7 +300,7 @@ export default function LoginPage() {
           <div className="text-center text-xs text-[#C7BDB3] mt-6 pt-4 border-t border-[#3B332B] font-medium">
             Don&apos;t have an account?{" "}
             <Link
-              href="#"
+              href="/register"
               className="text-[#F88D50] hover:underline font-semibold ml-1"
             >
               Create an account
