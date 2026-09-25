@@ -2,76 +2,77 @@
 
 @layer base {
   :root {
-    /* Palette Inspired: Warm Coral (#F88D50), Sand (#FED5A2), Pale Ivory (#FFFEE5), Sky Blue (#8EC8FC) */
-    --bg-primary: #12100E;
-    --bg-secondary: #181512;
-    --bg-surface: #201C18;
-    --bg-surface-elevated: #28231E;
-    --bg-card: #241F1A;
-    --bg-glass: rgba(36, 31, 26, 0.88);
-    --bg-glass-hover: #312A24;
-    --border-glass: #3B332B;
-    --border-glass-bright: #F88D50;
+    /* Primary Canvas */
+    --bg-primary: #0F0D0C;
+    --bg-secondary: #151312;
+    --bg-surface: #1B1918;
+    --bg-surface-elevated: #211F1D;
+    --bg-card: #181615;
+    --bg-hover: #262320;
     
-    --text-primary: #FFFEE5;
-    --text-secondary: #C7BDB3;
-    --text-muted: #8C8176;
+    /* Borders - Crisp & Subtle */
+    --border-subtle: #24201D;
+    --border-default: #2E2925;
+    --border-strong: #3D3732;
+    --border-accent: #3A7BD5;
     
-    --accent-primary: #F88D50;
-    --accent-primary-hover: #E77B3C;
-    --accent-sand: #FED5A2;
-    --accent-sand-hover: #FBCB8F;
-    --accent-blue: #8EC8FC;
-    --accent-ivory: #FFFEE5;
-    --accent-green: #5AC58E;
-    --accent-red: #F06E6E;
+    /* Typography */
+    --text-primary: #FAF7F2;
+    --text-secondary: #A9A39B;
+    --text-muted: #6F6A64;
+    --text-inverse: #0F0D0C;
     
-    /* Legacy mapping for smooth compatibility */
-    --accent-violet: #F88D50;
-    --accent-violet-hover: #E77B3C;
-    --accent-teal: #8EC8FC;
-    --accent-yellow: #FED5A2;
+    /* Subtle Financial Accents (Solid Colors Only) */
+    --accent-positive: #4E9F76;
+    --accent-positive-bg: #13241A;
+    --accent-negative: #D9534F;
+    --accent-negative-bg: #2B1414;
+    --accent-interactive: #3A7BD5;
+    --accent-interactive-hover: #2E68B8;
+    --accent-warning: #D9822B;
+    --accent-warning-bg: #2B1C10;
     
-    --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.45);
-    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
-    --shadow-neo: 2px 2px 4px rgba(0, 0, 0, 0.4), -1px -1px 3px rgba(255, 254, 229, 0.02);
-    --shadow-neo-inset: inset 1px 1px 3px rgba(0, 0, 0, 0.5);
+    /* Shadows - Restrained */
+    --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-modal: 0 8px 30px rgba(0, 0, 0, 0.7);
   }
 
   html.light {
-    --bg-primary: #FAF7EF;
+    /* Light Mode Canvas */
+    --bg-primary: #FAF7F2;
     --bg-secondary: #FFFFFF;
-    --bg-surface: #F4EFE3;
-    --bg-surface-elevated: #FFFFFF;
+    --bg-surface: #F4F1EC;
+    --bg-surface-elevated: #ECE8E1;
     --bg-card: #FFFFFF;
-    --bg-glass: rgba(255, 255, 255, 0.92);
-    --bg-glass-hover: #F7F2E8;
-    --border-glass: #E8DFC8;
-    --border-glass-bright: #E87034;
+    --bg-hover: #F0EDE6;
     
-    --text-primary: #1F1A16;
-    --text-secondary: #6E6257;
-    --text-muted: #9E9285;
+    /* Borders */
+    --border-subtle: #E8E2D8;
+    --border-default: #DDD5C9;
+    --border-strong: #C8BFB2;
+    --border-accent: #2E68B8;
     
-    --accent-primary: #E87034;
-    --accent-primary-hover: #D45F25;
-    --accent-sand: #E5B574;
-    --accent-sand-hover: #D4A360;
-    --accent-blue: #3B8EE8;
-    --accent-ivory: #FFFEE0;
-    --accent-green: #2EA866;
-    --accent-red: #DB4343;
+    /* Typography */
+    --text-primary: #171514;
+    --text-secondary: #6F6A64;
+    --text-muted: #9E978F;
+    --text-inverse: #FAF7F2;
     
-    /* Legacy mapping */
-    --accent-violet: #E87034;
-    --accent-violet-hover: #D45F25;
-    --accent-teal: #3B8EE8;
-    --accent-yellow: #E5B574;
+    /* Financial Accents */
+    --accent-positive: #2E8555;
+    --accent-positive-bg: #E8F5EE;
+    --accent-negative: #C0392B;
+    --accent-negative-bg: #FDE8E8;
+    --accent-interactive: #2E68B8;
+    --accent-interactive-hover: #204E8C;
+    --accent-warning: #B35C00;
+    --accent-warning-bg: #FEF3E6;
     
-    --shadow-subtle: 0 4px 20px rgba(31, 26, 22, 0.06);
-    --shadow-card: 0 2px 8px rgba(31, 26, 22, 0.04);
-    --shadow-neo: 2px 2px 5px rgba(31, 26, 22, 0.06), -2px -2px 5px rgba(255, 255, 255, 0.85);
-    --shadow-neo-inset: inset 1px 1px 3px rgba(31, 26, 22, 0.08);
+    /* Shadows */
+    --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-modal: 0 8px 30px rgba(0, 0, 0, 0.12);
   }
 }
 
@@ -79,125 +80,93 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-manrope), var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color 150ms ease, color 150ms ease;
   overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Glassmorphic Utilities (Solid Translucent Surfaces, No Gradients) */
-.glass-panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-card);
-  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+/* Tabular numbers for financial data accuracy */
+.font-mono-data {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+  font-variant-numeric: tabular-nums;
 }
 
-.glass-panel:hover {
-  border-color: var(--border-glass-bright);
-}
-
-.glass-card-interactive {
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-card);
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
-}
-
-.glass-card-interactive:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-glass-bright);
+/* Restrained Financial UI Surfaces (Zero Gradients) */
+.terminal-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
   box-shadow: var(--shadow-subtle);
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 
-.glass-pill {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-glass);
-  transition: all 200ms ease;
+.terminal-card:hover {
+  border-color: var(--border-strong);
 }
 
-/* Neomorphic Softness for Small Controls */
-.neo-pill {
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-neo);
-  border: 1px solid var(--border-glass);
+.terminal-card-interactive {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 150ms ease, background-color 150ms ease;
+  cursor: pointer;
 }
 
-.neo-inset {
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-neo-inset);
-  border: 1px solid var(--border-glass);
+.terminal-card-interactive:hover {
+  border-color: var(--border-accent);
+  background-color: var(--bg-hover);
 }
 
-.neo-button {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-neo);
-  transition: all 200ms ease;
-}
-
-.neo-button:hover {
-  transform: translateY(-1px);
-  background: var(--bg-glass-hover);
-  border-color: var(--border-glass-bright);
-}
-
-.neo-button:active {
-  box-shadow: var(--shadow-neo-inset);
-  transform: translateY(1px);
-}
-
-/* Solid Buttons (ZERO GRADIENTS) */
-.btn-primary {
-  background-color: var(--accent-primary);
-  color: #FFFFFF;
+/* Solid Institutional Buttons (NO GRADIENTS) */
+.btn-solid-primary {
+  background-color: var(--text-primary);
+  color: var(--text-inverse);
   border: 1px solid transparent;
-  box-shadow: var(--shadow-card);
-  transition: all 200ms ease;
+  font-weight: 600;
+  transition: opacity 150ms ease, background-color 150ms ease;
 }
 
-.btn-primary:hover {
-  background-color: var(--accent-primary-hover);
-  transform: translateY(-1.5px);
-  box-shadow: var(--shadow-subtle);
+.btn-solid-primary:hover {
+  opacity: 0.92;
 }
 
-.btn-primary:active {
-  transform: translateY(0.5px);
+.btn-solid-primary:active {
+  opacity: 0.85;
 }
 
-.btn-secondary {
-  background-color: var(--bg-surface-elevated);
-  border: 1px solid var(--border-glass);
+.btn-solid-secondary {
+  background-color: var(--bg-surface);
   color: var(--text-primary);
-  box-shadow: var(--shadow-card);
-  transition: all 200ms ease;
+  border: 1px solid var(--border-default);
+  font-weight: 500;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.btn-secondary:hover {
-  background-color: var(--bg-glass-hover);
-  border-color: var(--border-glass-bright);
-  transform: translateY(-1px);
+.btn-solid-secondary:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-strong);
 }
 
-.btn-secondary:active {
-  transform: translateY(0.5px);
+/* Financial Input Fields */
+.terminal-input {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 150ms ease;
 }
 
-/* Subtle Hover Lift */
-.hover-lift {
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+.terminal-input:focus {
+  border-color: var(--border-accent);
 }
 
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-subtle);
+.terminal-input::placeholder {
+  color: var(--text-muted);
 }
 
-/* Custom Scrollbar */
+/* Precision Terminal Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -205,8 +174,8 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-glass);
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

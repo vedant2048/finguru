@@ -14,40 +14,34 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
-        try {
-          const nameParts = user.name?.trim().split(" ") || [];
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
+        const nameParts = user.name?.trim().split(" ") || [];
 
-          // Upsert Google user profile in Supabase profiles table
-          const { error } = await supabaseAdmin
-            .from("profiles")
-            .upsert(
-              {
-                user_id: account.providerAccountId,
-                first_name: firstName,
-                last_name: lastName,
-                email: user.email,
-              },
-              {
-                onConflict: "user_id",
-              }
-            );
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
 
-          if (error) {
-            console.error("Supabase profile sync error during Google signIn:", error);
-          } else {
-            console.log("Supabase profile successfully synced for:", user.email);
-          }
-        } catch (error) {
-          // Log error but do not block legitimate Google authentication
-          console.error("Unexpected error syncing user profile to Supabase:", error);
+        const { error } = await supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              user_id: account.providerAccountId,
+              first_name: firstName,
+              last_name: lastName,
+              email: user.email,
+            },
+            {
+              onConflict: "user_id",
+            }
+          );
+
+        if (error) {
+          console.error("Supabase profile error:", error);
         }
       }
 
-      // Valid Google authentication always succeeds
       return true;
     },
+
+
 
     async jwt({ token, user, account }) {
       if (account && user) {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Inter } from "next/font/google";
+import { Manrope, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -15,10 +15,16 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "Wealthzy — Invest Smarter. Live Brighter.",
-  description: "Wealthzy helps you understand, track, and grow your investments — all in one place. Personalized insights. Smarter decisions. A wealthier you.",
-  keywords: ["fintech", "wealth management", "portfolio tracking", "investment insights", "SIP", "financial freedom"],
+  title: "Wealthzy — Understand your money. Invest with clarity.",
+  description: "Wealthzy is an intelligent personal finance and investment intelligence platform bringing your goals, portfolio, market data, and investment insights together in one workspace.",
+  keywords: ["fintech", "wealth management", "portfolio intelligence", "stock discovery", "financial clarity", "bloomberg terminal"],
 };
 
 export default function RootLayout({
@@ -29,10 +35,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${manrope.variable} ${inter.variable} h-full antialiased`}
+      className={`dark ${manrope.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans transition-colors duration-300">
+      <body className="min-h-full flex flex-col font-sans transition-colors duration-150">
         <ThemeProvider>
           {children}
         </ThemeProvider>

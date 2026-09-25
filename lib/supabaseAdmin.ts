@@ -1,25 +1,36 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+let _supabaseAdmin: SupabaseClient | null = null;
 
-if (!supabaseUrl) {
-  console.warn("NEXT_PUBLIC_SUPABASE_URL is missing in environment variables.");
-}
+export function getSupabaseAdmin(): SupabaseClient {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-if (!supabaseServiceRoleKey) {
-  console.warn("SUPABASE_SERVICE_ROLE_KEY is missing in environment variables.");
-}
-
-// Server-side only Supabase admin client initialized with service_role key
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  supabaseServiceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient(
+      supabaseUrl || "https://placeholder.supabase.co",
+      supabaseServiceRoleKey || "placeholder_service_role_key",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
   }
-);
+
+  return _supabaseAdmin;
+}
+
+// Proxy export so existing imports of `supabaseAdmin.from(...)` continue to work seamlessly
+export const supabaseAdmin = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    const client = getSupabaseAdmin();
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
