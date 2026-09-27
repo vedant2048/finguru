@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
 import { CommandPalette } from "./command-palette";
+import { User } from "lucide-react";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -48,11 +49,10 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center gap-6 lg:gap-8">
             <Link href="/dashboard" className="flex items-center gap-2 group focus:outline-none">
               <div
-                className={`w-6 h-6 rounded flex items-center justify-center font-mono text-xs font-bold border transition-colors ${
-                  isDark
+                className={`w-6 h-6 rounded flex items-center justify-center font-mono text-xs font-bold border transition-colors ${isDark
                     ? "bg-[#181513] border-[#2E2925] text-[#FAF7F2] group-hover:border-[#3A7BD5]"
                     : "bg-[#FFFFFF] border-[#DDD5C9] text-[#171514] group-hover:border-[#2E68B8]"
-                }`}
+                  }`}
               >
                 W
               </div>
@@ -69,15 +69,14 @@ export function AppShell({ children }: AppShellProps) {
                   <Link
                     key={link.name}
                     href={link.href}
-                    className={`px-3 py-1.5 rounded text-xs font-medium font-mono transition-colors ${
-                      isActive
+                    className={`px-3 py-1.5 rounded text-xs font-medium font-mono transition-colors ${isActive
                         ? isDark
                           ? "bg-[#1E1C1A] text-[#FAF7F2] border border-[#2E2925]"
                           : "bg-[#ECE8E1] text-[#171514] border border-[#DDD5C9]"
                         : isDark
-                        ? "text-[#A9A39B] hover:text-[#FAF7F2] hover:bg-[#151312]"
-                        : "text-[#6F6A64] hover:text-[#171514] hover:bg-[#F4F1EC]"
-                    }`}
+                          ? "text-[#A9A39B] hover:text-[#FAF7F2] hover:bg-[#151312]"
+                          : "text-[#6F6A64] hover:text-[#171514] hover:bg-[#F4F1EC]"
+                      }`}
                   >
                     {link.name}
                   </Link>
@@ -92,11 +91,10 @@ export function AppShell({ children }: AppShellProps) {
             <button
               onClick={() => setIsSearchOpen(true)}
               type="button"
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded border text-xs font-mono transition-colors cursor-pointer ${
-                isDark
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded border text-xs font-mono transition-colors cursor-pointer ${isDark
                   ? "bg-[#151312] border-[#24201D] text-[#A9A39B] hover:text-[#FAF7F2] hover:border-[#2E2925]"
                   : "bg-[#FFFFFF] border-[#DDD5C9] text-[#6F6A64] hover:text-[#171514] hover:border-[#C8BFB2]"
-              }`}
+                }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -113,11 +111,10 @@ export function AppShell({ children }: AppShellProps) {
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                 type="button"
                 aria-label="View notifications"
-                className={`w-8 h-8 rounded border flex items-center justify-center transition-colors cursor-pointer relative ${
-                  isDark
+                className={`w-8 h-8 rounded border flex items-center justify-center transition-colors cursor-pointer relative ${isDark
                     ? "bg-[#151312] border-[#24201D] text-[#A9A39B] hover:text-[#FAF7F2]"
                     : "bg-[#FFFFFF] border-[#DDD5C9] text-[#6F6A64] hover:text-[#171514]"
-                }`}
+                  }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -129,11 +126,10 @@ export function AppShell({ children }: AppShellProps) {
               {/* Notifications Dropdown */}
               {isNotificationsOpen && (
                 <div
-                  className={`absolute right-0 mt-2 w-80 rounded border shadow-xl p-3 z-50 text-xs font-mono space-y-2.5 ${
-                    isDark
+                  className={`absolute right-0 mt-2 w-80 rounded border shadow-xl p-3 z-50 text-xs font-mono space-y-2.5 ${isDark
                       ? "bg-[#151312] border-[#2E2925] text-[#FAF7F2]"
                       : "bg-[#FFFFFF] border-[#DDD5C9] text-[#171514]"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between pb-2 border-b border-inherit">
                     <span className="font-bold uppercase tracking-wider text-[11px]">FINANCIAL ALERTS</span>
@@ -172,11 +168,10 @@ export function AppShell({ children }: AppShellProps) {
               onClick={toggleTheme}
               type="button"
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className={`w-8 h-8 rounded border flex items-center justify-center transition-colors cursor-pointer ${
-                isDark
+              className={`w-8 h-8 rounded border flex items-center justify-center transition-colors cursor-pointer ${isDark
                   ? "bg-[#151312] border-[#24201D] text-[#A9A39B] hover:text-[#FAF7F2]"
                   : "bg-[#FFFFFF] border-[#DDD5C9] text-[#6F6A64] hover:text-[#171514]"
-              }`}
+                }`}
             >
               {isDark ? (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -192,24 +187,22 @@ export function AppShell({ children }: AppShellProps) {
             {/* Profile & Settings Avatar */}
             <Link
               href="/profile"
-              className={`w-8 h-8 rounded border flex items-center justify-center font-mono text-xs font-semibold transition-colors ${
-                isDark
+              className={`w-8 h-8 rounded border flex items-center justify-center font-mono text-xs font-semibold transition-colors ${isDark
                   ? "bg-[#1B1918] border-[#2E2925] text-[#FAF7F2] hover:border-[#3A7BD5]"
                   : "bg-[#FFFFFF] border-[#DDD5C9] text-[#171514] hover:border-[#2E68B8]"
-              }`}
+                }`}
             >
-              VP
+              <User size={24} color="#909090" strokeWidth={2} />
             </Link>
           </div>
         </div>
 
         {/* Bloomberg Ticker Ribbon */}
         <div
-          className={`w-full overflow-x-auto no-scrollbar py-1 px-4 sm:px-6 border-t text-[11px] font-mono flex items-center gap-6 whitespace-nowrap ${
-            isDark
+          className={`w-full overflow-x-auto no-scrollbar py-1 px-4 sm:px-6 border-t text-[11px] font-mono flex items-center gap-6 whitespace-nowrap ${isDark
               ? "bg-[#12100F] border-[#24201D] text-[#A9A39B]"
               : "bg-[#F4F1EC] border-[#E8E2D8] text-[#6F6A64]"
-          }`}
+            }`}
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#6F6A64] dark:text-[#6F6A64] light:text-[#9E978F]">
             LIVE FEED:
@@ -235,9 +228,8 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile Bottom Navigation Bar */}
       <nav
-        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 border-t flex items-center justify-around h-14 px-2 transition-colors ${
-          isDark ? "bg-[#0F0D0C] border-[#24201D]" : "bg-[#FAF7F2] border-[#E8E2D8]"
-        }`}
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 border-t flex items-center justify-around h-14 px-2 transition-colors ${isDark ? "bg-[#0F0D0C] border-[#24201D]" : "bg-[#FAF7F2] border-[#E8E2D8]"
+          }`}
       >
         {NAV_LINKS.slice(0, 5).map((link) => {
           const isActive = pathname === link.href;
@@ -245,15 +237,14 @@ export function AppShell({ children }: AppShellProps) {
             <Link
               key={link.name}
               href={link.href}
-              className={`flex flex-col items-center justify-center flex-1 py-1 font-mono text-[10px] uppercase transition-colors ${
-                isActive
+              className={`flex flex-col items-center justify-center flex-1 py-1 font-mono text-[10px] uppercase transition-colors ${isActive
                   ? isDark
                     ? "text-[#FAF7F2] font-bold"
                     : "text-[#171514] font-bold"
                   : isDark
-                  ? "text-[#6F6A64]"
-                  : "text-[#9E978F]"
-              }`}
+                    ? "text-[#6F6A64]"
+                    : "text-[#9E978F]"
+                }`}
             >
               <span>{link.name}</span>
             </Link>
@@ -261,9 +252,8 @@ export function AppShell({ children }: AppShellProps) {
         })}
         <Link
           href="/settings"
-          className={`flex flex-col items-center justify-center flex-1 py-1 font-mono text-[10px] uppercase ${
-            pathname === "/settings" ? (isDark ? "text-[#FAF7F2] font-bold" : "text-[#171514] font-bold") : (isDark ? "text-[#6F6A64]" : "text-[#9E978F]")
-          }`}
+          className={`flex flex-col items-center justify-center flex-1 py-1 font-mono text-[10px] uppercase ${pathname === "/settings" ? (isDark ? "text-[#FAF7F2] font-bold" : "text-[#171514] font-bold") : (isDark ? "text-[#6F6A64]" : "text-[#9E978F]")
+            }`}
         >
           <span>More</span>
         </Link>
@@ -271,11 +261,10 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Desktop Footer */}
       <footer
-        className={`hidden md:block w-full border-t py-4 text-center text-xs font-mono transition-colors ${
-          isDark
+        className={`hidden md:block w-full border-t py-4 text-center text-xs font-mono transition-colors ${isDark
             ? "border-[#24201D] text-[#6F6A64] bg-[#0F0D0C]"
             : "border-[#E8E2D8] text-[#9E978F] bg-[#FAF7F2]"
-        }`}
+          }`}
       >
         <div className="max-w-[1440px] mx-auto px-6 flex items-center justify-between">
           <span>WEALTHZY INTELLIGENCE &bull; INSTITUTIONAL RESEARCH WORKSPACE</span>

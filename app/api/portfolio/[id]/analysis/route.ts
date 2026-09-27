@@ -7,6 +7,37 @@ import { getCompletedPortfolio } from "@/lib/portfolio/repository";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+/** GET → retrieves current AI analysis status for the caller's portfolio. */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return NextResponse.json(
+      { code: "UNAUTHORIZED", message: "Your session has expired. Please sign in again." },
+      { status: 401 }
+    );
+  }
+
+  const portfolioId = Number((await params).id);
+  if (!Number.isSafeInteger(portfolioId) || portfolioId <= 0) {
+    return NextResponse.json({ code: "NOT_FOUND", message: "Portfolio not found." }, { status: 404 });
+  }
+
+  try {
+    const portfolio = await getCompletedPortfolio(user.id, portfolioId);
+    if (!portfolio) {
+      return NextResponse.json({ code: "NOT_FOUND", message: "Portfolio not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      analysisStatus: portfolio.analysisStatus,
+      analysis: portfolio.analysis ?? null,
+      analysisError: portfolio.analysisError ?? null,
+    });
+  } catch (err) {
+    return NextResponse.json(toUserFacingError(err), { status: 500 });
+  }
+}
+
 /** POST → regenerates the AI analysis for the caller's own portfolio. */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getAuthenticatedUser();

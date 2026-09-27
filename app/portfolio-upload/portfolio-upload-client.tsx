@@ -11,17 +11,22 @@ interface PortfolioUploadClientProps {
   alreadyUploaded: boolean;
 }
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".csv", ".xlsx", ".xls"];
 
-const STEPS: { stage: ProcessingStage; label: string }[] = [
-  { stage: "uploading", label: "Uploading file" },
-  { stage: "parsing", label: "Detecting portfolio columns" },
-  { stage: "identifying", label: "Identifying holdings" },
-  { stage: "fetching_market_data", label: "Fetching market data" },
-  { stage: "calculating", label: "Calculating portfolio metrics" },
-  { stage: "saving", label: "Saving portfolio" },
-  { stage: "analyzing", label: "Generating analysis" },
+interface ProgressStep {
+  stage: ProcessingStage;
+  label: string;
+  activeMessage: string;
+}
+
+const STEPS: ProgressStep[] = [
+  { stage: "uploading", label: "Uploading portfolio", activeMessage: "Uploading portfolio..." },
+  { stage: "parsing", label: "Reading portfolio data", activeMessage: "Reading portfolio data..." },
+  { stage: "identifying", label: "Identifying stocks", activeMessage: "Identifying stocks..." },
+  { stage: "fetching_market_data", label: "Fetching market data", activeMessage: "Fetching market data..." },
+  { stage: "analyzing", label: "Generating analysis", activeMessage: "Generating analysis..." },
+  { stage: "completed", label: "Preparing dashboard", activeMessage: "Preparing your dashboard..." },
 ];
 
 type Choice =
@@ -59,7 +64,8 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
   const [choices, setChoices] = useState<Record<number, Choice | undefined>>({});
   const [analysisNote, setAnalysisNote] = useState<string | null>(null);
 
-  const isBusy = !["idle", "error", "needs_review", "completed"].includes(stage);
+  const isProcessing = ["uploading", "parsing", "identifying", "fetching_market_data", "calculating", "saving", "analyzing", "completed"].includes(stage);
+  const isFullScreenActive = isProcessing || (stage === "error" && failedStage !== null);
 
   const c = {
     muted: isDark ? "text-[#9E978F]" : "text-[#6B635B]",
@@ -115,7 +121,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    if (isBusy) return;
+    if (isProcessing) return;
     const file = e.dataTransfer.files?.[0];
     if (file) validateAndSetFile(file);
   };
@@ -131,7 +137,6 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  /** Sends a request whose response is an NDJSON stream of pipeline events. */
   const runPipeline = async (url: string, init: RequestInit) => {
     let currentStage: ProcessingStage = stage;
     const advance = (s: ProcessingStage) => {
@@ -139,7 +144,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
       setStage(s);
     };
     const fail = (err: ErrorState) => {
-      setFailedStage(currentStage);
+      setFailedStage(currentStage || "uploading");
       setError(err);
       setStage("error");
     };
@@ -148,14 +153,14 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
     try {
       response = await fetch(url, init);
     } catch {
-      fail({ message: "Network error: we couldn't reach Wealthzy. Check your connection and try again." });
+      fail({ message: "Network error: unable to reach server. Please check your connection and try again." });
       return;
     }
 
     if (!response.ok || !response.body) {
       const body = await response.json().catch(() => null);
       fail({
-        message: body?.message ?? "The request failed. Please try again.",
+        message: body?.message ?? "The portfolio processing request failed.",
         details: body?.details,
         sessionExpired: response.status === 401,
       });
@@ -183,12 +188,14 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
           finished = true;
           advance("completed");
           if (event.analysisStatus === "failed") {
-            setAnalysisNote("Your portfolio is ready. The AI analysis could not be generated — you can retry it from the dashboard.");
+            setAnalysisNote("Your portfolio is ready. AI analysis could not be generated and can be retried from the dashboard.");
           } else if (event.analysisStatus === "unavailable") {
-            setAnalysisNote("Your portfolio is ready. AI analysis is not configured on this server.");
+            setAnalysisNote("Your portfolio is ready.");
           }
           router.refresh();
-          setTimeout(() => router.push(event.redirectTo), event.analysisStatus === "completed" ? 900 : 2500);
+          setTimeout(() => {
+            router.push(event.redirectTo || "/dashboard");
+          }, 1200);
           break;
         case "error":
           finished = true;
@@ -204,14 +211,18 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
-        for (const line of lines) if (line.trim()) handle(JSON.parse(line) as PipelineEvent);
+        for (const line of lines) {
+          if (line.trim()) handle(JSON.parse(line) as PipelineEvent);
+        }
       }
       if (buffer.trim()) handle(JSON.parse(buffer) as PipelineEvent);
     } catch {
       fail({ message: "The connection was interrupted while processing your portfolio. Please try again." });
       return;
     }
-    if (!finished) fail({ message: "Processing ended unexpectedly. Please try again." });
+    if (!finished && stage !== "error") {
+      fail({ message: "Portfolio processing ended unexpectedly. Please try again." });
+    }
   };
 
   const handleUpload = async () => {
@@ -247,10 +258,29 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
     });
   };
 
-  const stepIndex = (s: ProcessingStage) => STEPS.findIndex((st) => st.stage === s);
-  const activeIndex =
-    stage === "completed" ? STEPS.length : stage === "error" ? stepIndex(failedStage ?? "uploading") : stepIndex(stage);
-  const showProgress = stage !== "idle" && !(stage === "error" && failedStage === null);
+  const getStepIndex = (s: ProcessingStage): number => {
+    switch (s) {
+      case "uploading":
+        return 0;
+      case "parsing":
+        return 1;
+      case "identifying":
+        return 2;
+      case "fetching_market_data":
+      case "calculating":
+      case "saving":
+        return 3;
+      case "analyzing":
+        return 4;
+      case "completed":
+        return 5;
+      default:
+        return 0;
+    }
+  };
+
+  const activeStepIdx = stage === "completed" ? 5 : getStepIndex(stage);
+  const currentStepInfo = STEPS[activeStepIdx] || STEPS[0];
 
   return (
     <div
@@ -258,6 +288,184 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
         isDark ? "bg-[#0F0D0C] text-[#FAF7F2]" : "bg-[#FAF7F2] text-[#171514]"
       }`}
     >
+      {/* FULL-SCREEN LOADING / PROCESSING OVERLAY */}
+      {isFullScreenActive && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Portfolio Processing Progress"
+          className={`fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 transition-all duration-300 backdrop-blur-xl ${
+            isDark ? "bg-[#0F0D0C]/95 text-[#FAF7F2]" : "bg-[#FAF7F2]/95 text-[#171514]"
+          }`}
+        >
+          {/* Header */}
+          <div className="max-w-4xl w-full mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`w-7 h-7 rounded flex items-center justify-center border font-mono text-xs font-bold ${
+                  isDark ? "bg-[#181513] border-[#2A2420] text-[#FAF7F2]" : "bg-[#FFFFFF] border-[#DDD5C9] text-[#171514]"
+                }`}
+              >
+                W
+              </div>
+              <span className="text-xs font-bold tracking-tight uppercase font-mono">
+                WEALTHZY PIPELINE
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${stage === "error" ? "bg-rose-500" : "bg-[#3A7BD5] animate-ping"}`} />
+              <span className={`text-[11px] font-mono uppercase tracking-wider ${stage === "error" ? "text-rose-400" : c.accent}`}>
+                {stage === "error" ? "PROCESSING FAILED" : "GENERATING ANALYSIS"}
+              </span>
+            </div>
+          </div>
+
+          {/* Central Progress Content */}
+          <div className="max-w-xl w-full mx-auto my-auto py-8 text-center space-y-8">
+            {/* Animated Center Spinner / Status Glyph */}
+            <div className="relative flex items-center justify-center mx-auto w-24 h-24">
+              {stage === "error" ? (
+                <div className="w-20 h-20 rounded-full border-2 border-rose-500/40 bg-rose-500/10 flex items-center justify-center text-rose-500 text-3xl">
+                  ✕
+                </div>
+              ) : stage === "completed" ? (
+                <div className="w-20 h-20 rounded-full border-2 border-emerald-500/50 bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-3xl animate-bounce">
+                  ✓
+                </div>
+              ) : (
+                <>
+                  <div className={`absolute inset-0 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-[#3A7BD5]" : "border-[#2E68B8]"}`} />
+                  <div className={`w-16 h-16 rounded-full border flex items-center justify-center ${isDark ? "bg-[#181513] border-[#2A2420]" : "bg-[#FFFFFF] border-[#DDD5C9]"}`}>
+                    <svg className="w-7 h-7 text-[#3A7BD5] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Current Stage Message */}
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                {stage === "error"
+                  ? "Analysis Failed"
+                  : stage === "completed"
+                  ? "Preparing your dashboard..."
+                  : currentStepInfo.activeMessage}
+              </h2>
+              <p className={`text-xs sm:text-sm font-mono ${c.muted}`}>
+                {selectedFile?.name ? `Processing ${selectedFile.name}` : "Analyzing portfolio holdings"}
+                {stageDetail[stage] ? ` · ${stageDetail[stage]}` : ""}
+              </p>
+            </div>
+
+            {/* Error Message Box inside Full-Screen Mode */}
+            {stage === "error" && error && (
+              <div
+                role="alert"
+                className={`p-4 rounded border text-left text-xs font-mono space-y-2 ${
+                  isDark ? "bg-[#2B1414] border-rose-500/40 text-rose-300" : "bg-rose-50 border-rose-300 text-rose-800"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
+                    <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2" />
+                  </svg>
+                  <span>{error.message}</span>
+                </div>
+                {error.details && error.details.length > 0 && (
+                  <ul className="list-disc pl-5 space-y-1 opacity-90">
+                    {error.details.map((d, idx) => (
+                      <li key={idx}>{d}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={resetRun}
+                    className={`h-9 px-4 rounded text-xs font-mono font-semibold transition-all cursor-pointer ${
+                      isDark ? "bg-rose-500 text-white hover:bg-rose-600" : "bg-rose-700 text-white hover:bg-rose-800"
+                    }`}
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    className={`h-9 px-4 rounded border text-xs font-mono transition-all cursor-pointer ${
+                      isDark ? "border-[#2A2420] text-[#FAF7F2] hover:bg-[#181513]" : "border-[#DDD5C9] text-[#171412] hover:bg-white"
+                    }`}
+                  >
+                    Choose Another File
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Stepper Progression Timeline */}
+            <div className={`p-5 rounded border text-left space-y-3 ${c.panel}`}>
+              <div className={`text-[10px] font-mono uppercase tracking-wider font-bold ${c.faint}`}>
+                PIPELINE STAGES
+              </div>
+              <ol className="space-y-2.5">
+                {STEPS.map((step, idx) => {
+                  const isDone = idx < activeStepIdx || stage === "completed";
+                  const isCurrent = idx === activeStepIdx && stage !== "completed" && stage !== "error";
+                  const isFailed = idx === activeStepIdx && stage === "error";
+
+                  return (
+                    <li key={step.stage} className="flex items-center justify-between text-xs font-mono">
+                      <div className="flex items-center gap-3">
+                        <span className="w-5 text-center shrink-0">
+                          {isDone ? (
+                            <span className="text-emerald-500 font-bold">✓</span>
+                          ) : isFailed ? (
+                            <span className="text-rose-500 font-bold">✕</span>
+                          ) : isCurrent ? (
+                            <span className={`inline-block w-2.5 h-2.5 rounded-full animate-ping ${isDark ? "bg-[#3A7BD5]" : "bg-[#2E68B8]"}`} />
+                          ) : (
+                            <span className={c.faint}>○</span>
+                          )}
+                        </span>
+                        <span
+                          className={`font-medium ${
+                            isDone
+                              ? isDark ? "text-[#FAF7F2]" : "text-[#171412]"
+                              : isCurrent
+                              ? `${c.accent} font-semibold`
+                              : isFailed
+                              ? "text-rose-400 font-semibold"
+                              : c.faint
+                          }`}
+                        >
+                          {step.label}
+                        </span>
+                      </div>
+
+                      {stageDetail[step.stage] && (isDone || isCurrent) && (
+                        <span className={`text-[11px] ${c.faint}`}>
+                          {stageDetail[step.stage]}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </div>
+
+          {/* Footer note */}
+          <div className="max-w-4xl w-full mx-auto text-center text-xs font-mono text-zinc-500">
+            Institutional portfolio analytics powered by Wealthzy engine.
+          </div>
+        </div>
+      )}
+
+      {/* Top Header for regular upload screen */}
       <header className={`w-full border-b py-4 px-6 ${isDark ? "border-[#201C19] bg-[#0F0D0C]" : "border-[#EBE4DA] bg-[#FAF7F2]"}`}>
         <div className="max-w-[1140px] mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group focus:outline-none">
@@ -297,17 +505,18 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
         </div>
       </header>
 
+      {/* Main Upload / Review Body */}
       <main className="flex-1 flex items-start justify-center px-4 py-10 md:py-14">
         <div className={`w-full mx-auto space-y-6 ${stage === "needs_review" ? "max-w-3xl" : "max-w-xl"}`}>
           <div className="text-center space-y-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Upload your portfolio</h1>
             <p className={`text-xs sm:text-sm leading-relaxed ${c.muted}`}>
               Upload your holdings as CSV or Excel. Wealthzy identifies each stock, fetches live market data and
-              calculates your portfolio before opening the dashboard.
+              generates your analysis before opening the dashboard.
             </p>
           </div>
 
-          {error && (
+          {error && !isFullScreenActive && (
             <div
               role="alert"
               className={`p-3.5 rounded border text-xs font-mono flex items-start gap-3 ${
@@ -335,7 +544,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
             </div>
           )}
 
-          {/* Drop zone — hidden while processing or reviewing */}
+          {/* Drop zone */}
           {(stage === "idle" || stage === "error") && (
             <div
               onDragOver={(e) => {
@@ -384,7 +593,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
                   Browse Files
                 </button>
                 <div className={`text-[11px] font-mono tracking-wider ${c.faint}`}>
-                  Supported: <span className={`font-bold ${c.accent}`}>.csv, .xlsx, .xls</span> (max 5 MB)
+                  Supported: <span className={`font-bold ${c.accent}`}>.csv, .xlsx, .xls</span> (max 10 MB)
                 </div>
               </div>
             </div>
@@ -410,49 +619,10 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
                   type="button"
                   id="btn-remove-file"
                   onClick={handleRemoveFile}
-                  className={`p-1.5 rounded hover:opacity-80 text-xs font-mono ${c.negative}`}
+                  className={`p-1.5 rounded hover:opacity-80 text-xs font-mono ${c.negative} cursor-pointer`}
                 >
                   Remove
                 </button>
-              )}
-            </div>
-          )}
-
-          {/* Stage-by-stage progress */}
-          {showProgress && stage !== "needs_review" && (
-            <div className={`p-4 rounded border ${c.panel}`}>
-              <div className={`text-[10px] font-mono uppercase tracking-wider font-bold mb-3 ${c.muted}`}>Processing</div>
-              <ol className="space-y-2">
-                {STEPS.map((step, i) => {
-                  const done = i < activeIndex;
-                  const active = i === activeIndex && stage !== "error";
-                  const failed = i === activeIndex && stage === "error";
-                  return (
-                    <li key={step.stage} className="flex items-center gap-3 text-xs font-mono">
-                      <span className="w-4 text-center shrink-0" aria-hidden>
-                        {done ? (
-                          <span className={c.positive}>✓</span>
-                        ) : failed ? (
-                          <span className={c.negative}>✕</span>
-                        ) : active ? (
-                          <span className={`inline-block w-2 h-2 rounded-full animate-pulse ${isDark ? "bg-[#3A7BD5]" : "bg-[#2E68B8]"}`} />
-                        ) : (
-                          <span className={c.faint}>○</span>
-                        )}
-                      </span>
-                      <span className={done || active ? "" : failed ? c.negative : c.faint}>{step.label}</span>
-                      {stageDetail[step.stage] && (done || active) && (
-                        <span className={`ml-auto text-[11px] ${c.faint}`}>{stageDetail[step.stage]}</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
-              {stage === "completed" && (
-                <div className={`mt-4 pt-3 border-t text-xs font-mono ${c.divider}`}>
-                  <p className={`font-semibold ${c.positive}`}>Portfolio processed. Opening your dashboard…</p>
-                  {analysisNote && <p className={`mt-1 ${c.warning}`}>{analysisNote}</p>}
-                </div>
               )}
             </div>
           )}
@@ -464,8 +634,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
                 <div className={`text-[10px] font-mono uppercase tracking-wider font-bold ${c.warning}`}>Needs review</div>
                 <p className="text-sm font-semibold mt-1">{review.message}</p>
                 <p className={`text-xs mt-1 ${c.muted}`}>
-                  We never guess a stock. Choose the correct listing, enter the NSE/BSE symbol, or exclude the holding.
-                  Excluded holdings are kept on record but left out of calculations.
+                  Choose the correct listing, enter the NSE/BSE symbol, or exclude the holding. Excluded holdings are kept on record but left out of calculations.
                 </p>
               </div>
 
@@ -580,7 +749,7 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
                 <button
                   type="button"
                   onClick={handleRemoveFile}
-                  className={`h-10 px-4 rounded border text-xs font-mono ${c.control}`}
+                  className={`h-10 px-4 rounded border text-xs font-mono ${c.control} cursor-pointer`}
                 >
                   Upload a different file
                 </button>
@@ -628,8 +797,8 @@ export function PortfolioUploadClient({ alreadyUploaded }: PortfolioUploadClient
             <div className={`p-4 rounded border text-[11px] font-mono space-y-2 ${c.panel} ${c.muted}`}>
               <div className={`font-semibold uppercase tracking-wider text-[10px] ${c.accent}`}>Required columns</div>
               <p className="leading-relaxed">
-                Column names are detected automatically (Zerodha, Groww, Upstox and custom sheets). Your file needs a
-                company or symbol, a quantity and an average buy price.
+                Column names are detected automatically (Zerodha, Groww, Upstox, Dhan and custom spreadsheets). Your file needs a
+                company/symbol, quantity and average buy price.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {["Company / Symbol", "Quantity / Qty", "Avg Price / Buy Price", "LTP (optional)", "P&L (optional)"].map((col) => (

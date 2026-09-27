@@ -11,6 +11,7 @@
 -- ─────────────────────────────────────────────────────────────
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS has_portfolio BOOLEAN DEFAULT NULL;
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS portfolio_uploaded BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
 -- portfolios.user_id references this column, so it must be unique (NextAuth upserts on it).
 DO $$

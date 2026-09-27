@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { User } from 'lucide-react';
 
 export default function ProfilePage() {
   const [name, setName] = useState("Vedant Patil");
@@ -42,7 +43,7 @@ export default function ProfilePage() {
         {/* Identity Overview Card */}
         <div className="p-6 rounded border bg-[#151312] border-[#24201D] dark:bg-[#151312] dark:border-[#24201D] light:bg-[#FFFFFF] light:border-[#E8E2D8] flex flex-col sm:flex-row items-center gap-5">
           <div className="w-16 h-16 rounded border flex items-center justify-center text-xl font-bold bg-[#181615] border-[#2E2925] text-[#FAF7F2] dark:bg-[#181615] dark:border-[#2E2925] dark:text-[#FAF7F2] light:bg-[#FAF7F2] light:border-[#DDD5C9] light:text-[#171514]">
-            VP
+            <User size={24} color="#909090" strokeWidth={2} />
           </div>
           <div className="space-y-1 text-center sm:text-left flex-1">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">

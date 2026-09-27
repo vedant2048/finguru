@@ -125,6 +125,48 @@ function AnalysisSection({
   const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (analysis || status === "failed" || status === "unavailable") return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const checkStatus = async () => {
+      if (cancelled || attempts >= maxAttempts) return;
+      attempts++;
+      try {
+        const res = await fetch(`/api/portfolio/${portfolioId}/analysis`);
+        if (res.ok) {
+          const body = await res.json();
+          if (body.analysis) {
+            setAnalysis(body.analysis);
+            setStatus(body.analysisStatus);
+            setError(body.analysisError);
+            return;
+          }
+          if (body.analysisStatus === "failed") {
+            setStatus("failed");
+            setError(body.analysisError);
+            return;
+          }
+        }
+      } catch {
+        // Ignore polling network glitches
+      }
+
+      if (!cancelled && attempts < maxAttempts) {
+        setTimeout(checkStatus, 2000);
+      }
+    };
+
+    const timer = setTimeout(checkStatus, 1000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [portfolioId, analysis, status]);
+
   const regenerate = async () => {
     setLoading(true);
     setError(null);

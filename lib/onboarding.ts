@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { hasCompletedPortfolio } from "@/lib/portfolio/repository";
+import crypto from "crypto";
 
 export interface UserProfileState {
   id?: number | string;
@@ -55,12 +56,12 @@ export function getOnboardingRoute(state: {
 
 /**
  * Fetch authenticated user's profile and current onboarding state from Supabase.
+ * If user does not have a profile row yet, creates one automatically with null portfolio.
  */
 export async function getUserProfile(email: string): Promise<UserProfileState | null> {
   if (!email) return null;
 
   try {
-    // Attempt to query all relevant profile columns
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("*")
@@ -73,23 +74,49 @@ export async function getUserProfile(email: string): Promise<UserProfileState | 
       return null;
     }
 
-    if (!data) {
-      return null;
+    let profileData = data;
+
+    if (!profileData) {
+      // Auto-create initial profile for authenticated new user
+      const newUserId = `usr_${crypto.randomUUID()}`;
+      const { data: created, error: createError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          user_id: newUserId,
+          email,
+          has_portfolio: null,
+          portfolio_uploaded: false,
+        })
+        .select("*")
+        .maybeSingle();
+
+      if (createError || !created) {
+        console.error("[onboarding] Error creating initial profile:", createError);
+        return {
+          email,
+          user_id: newUserId,
+          has_portfolio: null,
+          portfolio_uploaded: false,
+        };
+      }
+      profileData = created;
     }
 
-    // Only a fully processed portfolio unlocks the dashboard; the profile flag alone is not trusted.
+    // Only a fully processed portfolio belonging to this user_id unlocks the dashboard
     const portfolioUploaded =
-      data.has_portfolio === true && data.user_id ? await hasCompletedPortfolio(String(data.user_id)) : false;
+      profileData.has_portfolio === true && profileData.user_id
+        ? await hasCompletedPortfolio(String(profileData.user_id))
+        : false;
 
     return {
-      id: data.id,
-      email: data.email,
-      user_id: data.user_id,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      phone_no: data.phone_no,
-      dob: data.dob,
-      has_portfolio: data.has_portfolio !== undefined ? data.has_portfolio : null,
+      id: profileData.id,
+      email: profileData.email,
+      user_id: profileData.user_id,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      phone_no: profileData.phone_no,
+      dob: profileData.dob,
+      has_portfolio: profileData.has_portfolio !== undefined ? profileData.has_portfolio : null,
       portfolio_uploaded: portfolioUploaded,
     };
   } catch (err: any) {
@@ -125,7 +152,6 @@ export async function updateHasPortfolio(
       .eq("email", email);
 
     if (error) {
-      // If portfolio_uploaded column doesn't exist yet, retry updating just has_portfolio
       if (error.code === "42703" || error.message?.includes("portfolio_uploaded")) {
         const { error: retryError } = await supabaseAdmin
           .from("profiles")
@@ -157,7 +183,6 @@ export async function resolveUserOnboardingRoute(email: string): Promise<Onboard
   const profile = await getUserProfile(email);
 
   if (!profile) {
-    // Default for new profiles where profile record is not yet filled
     return "/portfolio-check";
   }
 

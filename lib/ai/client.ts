@@ -8,7 +8,7 @@ import { z } from "zod";
 export const AI_MODEL =
   process.env.AI_MODEL ||
   process.env.OPENROUTER_MODEL ||
-  "nvidia/nemotron-3-ultra-550b-a55b:free";
+  "openrouter/free";
 
 const getBaseUrl = (key?: string) => {
   if (process.env.AI_BASE_URL) return process.env.AI_BASE_URL;
@@ -51,8 +51,8 @@ export function getAIClient(): OpenAI | null {
       "HTTP-Referer": process.env.NEXTAUTH_URL || "http://localhost:3000",
       "X-Title": "Wealthzy Financial Guru",
     },
-    timeout: 120_000,
-    maxRetries: 2,
+    timeout: 35_000,
+    maxRetries: 1,
   });
   return client;
 }
@@ -73,8 +73,7 @@ function extractJson(text: string): unknown {
 }
 
 /**
- * One structured-output call with reasoning support.
- * Preserves reasoning_details in multi-turn error correction loops.
+ * One structured-output call with fast JSON mode.
  */
 export async function generateStructured<S extends z.ZodType>(opts: {
   schema: S;
@@ -90,7 +89,7 @@ export async function generateStructured<S extends z.ZodType>(opts: {
   const messages: any[] = [
     {
       role: "system",
-      content: `${opts.system}\n\nRespond with a single JSON object only — no prose, no markdown fences. It must validate against this JSON Schema:\n${jsonSchema}`,
+      content: `${opts.system}\n\nRespond with a single JSON object only — no markdown fences. Must strictly adhere to this schema:\n${jsonSchema}`,
     },
     { role: "user", content: opts.prompt },
   ];
@@ -100,15 +99,15 @@ export async function generateStructured<S extends z.ZodType>(opts: {
     let completion: OpenAI.Chat.ChatCompletion;
     try {
       const extraBody: Record<string, any> = {};
-      if (opts.enableReasoning !== false) {
+      if (opts.enableReasoning === true) {
         extraBody.reasoning = { enabled: true };
       }
 
       completion = await ai.chat.completions.create({
         model: AI_MODEL,
         messages: messages as any,
-        temperature: 0.2,
-        max_tokens: 8192,
+        temperature: 0.1,
+        max_tokens: 4096,
         ...(Object.keys(extraBody).length > 0 ? ({ extra_body: extraBody } as any) : {}),
       });
     } catch (err) {
@@ -143,21 +142,14 @@ export async function generateStructured<S extends z.ZodType>(opts: {
       }
     }
 
-    // Preserve assistant message along with reasoning_details for reasoning continuation
-    const assistantMessage: any = { role: "assistant", content: text };
-    if ((message as any)?.reasoning_details) {
-      assistantMessage.reasoning_details = (message as any).reasoning_details;
-    }
-
     messages.push(
-      assistantMessage,
+      { role: "assistant", content: text },
       {
         role: "user",
-        content: `That reply was not valid (${lastProblem}). Reply again with only the corrected JSON object.`,
+        content: `That reply was not valid JSON matching schema (${lastProblem}). Reply again with only the corrected JSON object.`,
       }
     );
   }
 
   throw new AIError(`AI returned output that did not match the expected format (${lastProblem}).`);
 }
-

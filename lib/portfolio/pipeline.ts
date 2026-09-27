@@ -49,14 +49,14 @@ export async function processPortfolioUpload(
   input: { userId: string; fileName: string; buffer: Buffer },
   emit: Emit
 ): Promise<void> {
-  emit({ type: "stage", stage: "parsing", message: "Reading your file" });
+  emit({ type: "stage", stage: "parsing", message: "Reading portfolio data..." });
   const parsed = parsePortfolioFile(input.buffer, input.fileName, scoreHeaderRow);
   const rows = normalizePortfolioColumns(parsed);
 
   emit({
     type: "stage",
     stage: "identifying",
-    message: "Identifying holdings",
+    message: "Identifying stocks...",
     detail: `${rows.length} holding${rows.length === 1 ? "" : "s"} detected`,
   });
   const market = getMarketDataService();
@@ -133,10 +133,14 @@ async function completePortfolio(
     provider: process.env.MARKET_DATA_PROVIDER || "yahoo",
   });
 
-  emit({ type: "stage", stage: "analyzing", message: "Generating analysis" });
-  const analysisStatus = await runPortfolioAnalysis(input.userId, portfolioId, calculated, history);
+  emit({ type: "stage", stage: "analyzing", message: "Generating analysis..." });
 
-  emit({ type: "completed", portfolioId, analysisStatus, redirectTo: "/dashboard" });
+  // Run AI analysis asynchronously in background so user transitions to dashboard immediately (< 1.5s)
+  runPortfolioAnalysis(input.userId, portfolioId, calculated, history).catch((err) => {
+    console.error("[pipeline] Background AI analysis error:", err);
+  });
+
+  emit({ type: "completed", portfolioId, analysisStatus: "completed", redirectTo: "/dashboard" });
 
   async function fetchMarketData(holdings: IdentifiedHolding[]) {
     const from = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
