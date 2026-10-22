@@ -27,5 +27,20 @@ export default async function DashboardPage() {
     redirect("/portfolio-upload");
   }
 
-  return <DashboardClient userName={user.name ?? undefined} portfolio={portfolio} />;
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || user.name || undefined;
+
+  return (
+    <DashboardClient
+      userName={fullName}
+      portfolio={portfolio}
+      initialProfile={{
+        email: profile?.email || user.email,
+        firstName: profile?.first_name || "",
+        lastName: profile?.last_name || "",
+        fullName: fullName || "",
+        phoneNo: profile?.phone_no || "",
+        dob: profile?.dob || "",
+      }}
+    />
+  );
 }

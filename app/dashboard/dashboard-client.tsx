@@ -15,10 +15,22 @@ import {
 import type { PortfolioAnalysis } from "@/lib/ai/portfolioAnalysis";
 import type { StoredPortfolio } from "@/lib/portfolio/repository";
 import type { AnalysisStatus } from "@/lib/portfolio/types";
+import { Modal } from "@/components/ui/modal";
+import { Phone, Calendar, User, Mail, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+
+export interface DashboardUserProfile {
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  phoneNo: string;
+  dob: string;
+}
 
 interface DashboardClientProps {
   userName?: string;
   portfolio: StoredPortfolio;
+  initialProfile?: DashboardUserProfile;
 }
 
 type Severity = "low" | "medium" | "high";
@@ -315,11 +327,84 @@ function AnalysisSection({
   );
 }
 
-export function DashboardClient({ userName, portfolio }: DashboardClientProps) {
+export function DashboardClient({ userName, portfolio, initialProfile }: DashboardClientProps) {
   const s = useStyles();
   const { summary, holdings, sectorAllocation } = portfolio;
   const pnlTone = summary.totalProfitLoss >= 0 ? "positive" : "negative";
-  const firstName = (userName ?? "Investor").split(" ")[0];
+
+  // Dynamic user profile state & check if any fields are missing
+  const [profile, setProfile] = useState<DashboardUserProfile | undefined>(initialProfile);
+
+  const isProfileIncomplete = Boolean(
+    profile && (!profile.phoneNo?.trim() || !profile.dob?.trim() || !profile.fullName?.trim())
+  );
+
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(isProfileIncomplete);
+  const [promptName, setPromptName] = useState(profile?.fullName || userName || "");
+  const [promptPhone, setPromptPhone] = useState(profile?.phoneNo || "");
+  const [promptDob, setPromptDob] = useState(profile?.dob || "");
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
+  const [promptSuccess, setPromptSuccess] = useState<string | null>(null);
+
+  const handleSavePrompt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPrompt(true);
+    setPromptError(null);
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: promptName.trim(),
+          phone_no: promptPhone.trim(),
+          dob: promptDob.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update profile");
+      }
+
+      const updatedName = data.profile?.name || promptName.trim();
+      const updatedPhone = data.profile?.phone_no || promptPhone.trim();
+      const updatedDob = data.profile?.dob || promptDob.trim();
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              fullName: updatedName,
+              phoneNo: updatedPhone,
+              dob: updatedDob,
+            }
+          : undefined
+      );
+
+      try {
+        localStorage.setItem("wealthzy_userName", updatedName);
+        if (updatedPhone) localStorage.setItem("wealthzy_user_phone", updatedPhone);
+        if (updatedDob) localStorage.setItem("wealthzy_user_dob", updatedDob);
+      } catch {
+        // Ignore
+      }
+
+      setPromptSuccess("Profile completed successfully!");
+      setTimeout(() => {
+        setIsPromptModalOpen(false);
+        setPromptSuccess(null);
+      }, 900);
+    } catch (err: any) {
+      setPromptError(err.message || "An unexpected error occurred.");
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
+
+  const displayName = profile?.fullName || userName || "Investor";
+  const firstName = displayName.split(" ")[0];
   const processed = portfolio.processedAt
     ? new Date(portfolio.processedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
     : null;
@@ -328,6 +413,24 @@ export function DashboardClient({ userName, portfolio }: DashboardClientProps) {
   return (
     <AppShell>
       <div className="space-y-6">
+        {/* Profile Incomplete Notification Banner (if modal closed but profile still incomplete) */}
+        {isProfileIncomplete && !isPromptModalOpen && (
+          <div className="p-3.5 rounded border border-[#D9822B]/40 bg-[#D9822B]/10 text-xs font-mono text-[#D9822B] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span>
+                Your investor profile is incomplete (missing mobile number or date of birth). Required for compliance and real-time SMS alerts.
+              </span>
+            </div>
+            <button
+              onClick={() => setIsPromptModalOpen(true)}
+              className="px-3 py-1 rounded bg-[#D9822B] text-black font-semibold text-[11px] self-start sm:self-auto shrink-0 hover:bg-[#C07222] transition-colors"
+            >
+              Complete Profile Now
+            </button>
+          </div>
+        )}
+
         <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b ${s.divider}`}>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Portfolio Overview</h1>
@@ -466,6 +569,123 @@ export function DashboardClient({ userName, portfolio }: DashboardClientProps) {
           initialError={portfolio.analysisError}
           s={s}
         />
+
+        {/* Profile Completion Prompt Modal */}
+        <Modal
+          isOpen={isPromptModalOpen}
+          onClose={() => !isSavingPrompt && setIsPromptModalOpen(false)}
+          title="Complete Your Investor Profile"
+          subtitle="To ensure regulatory compliance and enable real-time SMS alerts, please complete your profile details."
+          maxWidth="md"
+        >
+          <form onSubmit={handleSavePrompt} className="space-y-4 text-xs font-mono">
+            {promptError && (
+              <div className="p-3 rounded border border-[#D9534F]/30 bg-[#D9534F]/10 text-[#D9534F]">
+                {promptError}
+              </div>
+            )}
+
+            {promptSuccess && (
+              <div className="p-3 rounded border border-[#4E9F76]/30 bg-[#4E9F76]/10 text-[#4E9F76] flex items-center gap-2">
+                <CheckCircle2 size={14} />
+                <span>{promptSuccess}</span>
+              </div>
+            )}
+
+            <div className="p-3 rounded border border-[#3A7BD5]/20 bg-[#3A7BD5]/5 text-[#3A7BD5] flex items-start gap-2.5">
+              <ShieldCheck size={16} className="shrink-0 mt-0.5" />
+              <p className="text-[11px] leading-relaxed">
+                Your mobile number and date of birth are stored securely and used exclusively to calculate investment time horizons and send urgent portfolio drift notifications.
+              </p>
+            </div>
+
+            {/* Email (Readonly) */}
+            <div>
+              <label className="block text-[#A9A39B] mb-1 font-semibold">Account Email</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={profile?.email || ""}
+                  disabled
+                  className="w-full h-10 px-3 pl-8 rounded border bg-[#181615]/50 border-[#2A2420] text-[#A9A39B] cursor-not-allowed outline-none"
+                />
+                <Mail size={14} className="absolute left-2.5 top-3 text-[#6F6A64]" />
+              </div>
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <label className="block text-[#A9A39B] mb-1 font-semibold">Full Name *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={promptName}
+                  onChange={(e) => setPromptName(e.target.value)}
+                  placeholder="e.g. Vedant Singh"
+                  className="w-full h-10 px-3 pl-8 rounded border bg-[#181615] border-[#2A2420] text-[#FAF7F2] focus:border-[#3A7BD5] outline-none dark:bg-[#181615] dark:border-[#2A2420] dark:text-[#FAF7F2] light:bg-[#FAF7F2] light:border-[#DDD5C9] light:text-[#171514]"
+                />
+                <User size={14} className="absolute left-2.5 top-3 text-[#A9A39B]" />
+              </div>
+            </div>
+
+            {/* Mobile Number */}
+            <div>
+              <label className="block text-[#A9A39B] mb-1 font-semibold">Mobile Number *</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  required
+                  value={promptPhone}
+                  onChange={(e) => setPromptPhone(e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
+                  className="w-full h-10 px-3 pl-8 rounded border bg-[#181615] border-[#2A2420] text-[#FAF7F2] focus:border-[#3A7BD5] outline-none dark:bg-[#181615] dark:border-[#2A2420] dark:text-[#FAF7F2] light:bg-[#FAF7F2] light:border-[#DDD5C9] light:text-[#171514]"
+                />
+                <Phone size={14} className="absolute left-2.5 top-3 text-[#A9A39B]" />
+              </div>
+              <span className="text-[10px] text-[#A9A39B] mt-1 block">
+                Required for real-time portfolio risk &amp; price threshold notifications.
+              </span>
+            </div>
+
+            {/* Date of Birth */}
+            <div>
+              <label className="block text-[#A9A39B] mb-1 font-semibold">Date of Birth *</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  required
+                  value={promptDob}
+                  onChange={(e) => setPromptDob(e.target.value)}
+                  className="w-full h-10 px-3 pl-8 rounded border bg-[#181615] border-[#2A2420] text-[#FAF7F2] focus:border-[#3A7BD5] outline-none dark:bg-[#181615] dark:border-[#2A2420] dark:text-[#FAF7F2] light:bg-[#FAF7F2] light:border-[#DDD5C9] light:text-[#171514]"
+                />
+                <Calendar size={14} className="absolute left-2.5 top-3 text-[#A9A39B]" />
+              </div>
+              <span className="text-[10px] text-[#A9A39B] mt-1 block">
+                Used to determine risk capacity and age-appropriate asset allocation.
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-[#24201D] dark:border-[#24201D] light:border-[#E8E2D8]">
+              <button
+                type="button"
+                onClick={() => setIsPromptModalOpen(false)}
+                disabled={isSavingPrompt}
+                className="px-4 py-2 rounded border text-xs font-mono transition-colors bg-transparent border-[#2A2420] text-[#A9A39B] hover:text-[#FAF7F2]"
+              >
+                Remind Me Later
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingPrompt}
+                className="px-5 py-2 rounded text-xs font-mono font-semibold transition-colors bg-[#3A7BD5] text-white hover:bg-[#2F6BC0] disabled:opacity-50"
+              >
+                {isSavingPrompt ? "Saving..." : "Save & Complete"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </AppShell>
   );
