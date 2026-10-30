@@ -249,7 +249,10 @@ export function PortfolioClient({ initialPortfolio }: PortfolioClientProps) {
               <span className="text-xs font-mono uppercase tracking-wider font-bold text-[#A9A39B] dark:text-[#A9A39B] light:text-[#6F6A64]">
                 Holdings Breakdown ({holdings.length} Securities)
               </span>
-              <span className="text-[11px] font-mono text-[#A9A39B]">PRICING: LIVE YAHOO FINANCE NSE/BSE</span>
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-[#4E9F76] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4E9F76] animate-pulse" />
+                PRICING: LIVE YAHOO FINANCE NSE/BSE
+              </span>
             </div>
 
             <div className="overflow-x-auto">

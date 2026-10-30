@@ -1,11 +1,30 @@
 import type { MarketQuote, PricePoint, SecurityCandidate } from "@/lib/portfolio/types";
 import { YahooMarketDataProvider } from "./yahooProvider";
-import { MarketDataError, type Exchange, type MarketDataProvider } from "./types";
+import {
+  MarketDataError,
+  type Exchange,
+  type MarketDataProvider,
+  type IndexQuote,
+  type ChartDataPoint,
+  type MarketCategoriesResult,
+  type StockDetailResult,
+  type StockFundamentals,
+} from "./types";
+import { getCachedFundamentals, saveCachedFundamentals } from "./fundamentalsCache";
 
 export { MarketDataError };
-export type { Exchange, MarketDataProvider };
+export type {
+  Exchange,
+  MarketDataProvider,
+  IndexQuote,
+  ChartDataPoint,
+  MarketCategoriesResult,
+  StockDetailResult,
+  StockFundamentals,
+};
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const REALTIME_TTL_MS = 45 * 1000; // 45 seconds for live dashboard feeds
 const MAX_CONCURRENCY = 4;
 
 function createProvider(): MarketDataProvider {
@@ -27,11 +46,11 @@ export class MarketDataService {
 
   constructor(private readonly provider: MarketDataProvider) {}
 
-  private async cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+  private async cached<T>(key: string, load: () => Promise<T>, ttl: number = CACHE_TTL_MS): Promise<T> {
     const hit = this.cache.get(key);
     if (hit && hit.expires > Date.now()) return hit.value as T;
     const value = await load();
-    this.cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
+    this.cache.set(key, { expires: Date.now() + ttl, value });
     return value;
   }
 
@@ -48,6 +67,81 @@ export class MarketDataService {
     return this.cached(`history:${exchange}:${symbol.toUpperCase()}:${day}`, () =>
       this.provider.getHistory(symbol, exchange, from)
     );
+  }
+
+  getMarketIndices(): Promise<IndexQuote[]> {
+    if (!this.provider.getMarketIndices) {
+      return Promise.resolve([]);
+    }
+    return this.cached("market:indices", () => this.provider.getMarketIndices!(), REALTIME_TTL_MS);
+  }
+
+  getBenchmarkChart(symbol: string = "^NSEI"): Promise<Record<string, ChartDataPoint[]>> {
+    if (!this.provider.getBenchmarkChart) {
+      return Promise.resolve({ "1D": [], "1W": [], "1M": [], "1Y": [] });
+    }
+    return this.cached(`market:benchmark:${symbol}`, () => this.provider.getBenchmarkChart!(symbol), REALTIME_TTL_MS);
+  }
+
+  getMarketCategories(): Promise<MarketCategoriesResult> {
+    if (!this.provider.getMarketCategories) {
+      return Promise.resolve({ gainers: [], losers: [], mostActive: [], fiftyTwoWeekHigh: [] });
+    }
+    return this.cached("market:categories", () => this.provider.getMarketCategories!(), REALTIME_TTL_MS);
+  }
+
+  getStockDetail(symbol: string, exchange: Exchange = "NSE"): Promise<StockDetailResult | null> {
+    if (!this.provider.getStockDetail) {
+      return Promise.resolve(null);
+    }
+    return this.cached(`stock:detail:${exchange}:${symbol.toUpperCase()}`, () => this.provider.getStockDetail!(symbol, exchange), REALTIME_TTL_MS);
+  }
+
+  /** Fetch fundamentals for a single Indian stock with Supabase/memory caching */
+  async getStockFundamentals(symbol: string, exchange: Exchange = "NSE"): Promise<StockFundamentals | null> {
+    const clean = symbol.trim().toUpperCase().replace(/\.(NS|BO)$/i, "");
+    const tickerWithSuffix = `${clean}${exchange === "BSE" ? ".BO" : ".NS"}`;
+    const cachedMap = await getCachedFundamentals([tickerWithSuffix]);
+    const hit = cachedMap.get(tickerWithSuffix);
+    if (hit) return hit;
+
+    if (!this.provider.getStockFundamentals) return null;
+    const fresh = await this.provider.getStockFundamentals(clean, exchange);
+    if (fresh) {
+      await saveCachedFundamentals([fresh]);
+    }
+    return fresh;
+  }
+
+  /** Batch fetch fundamentals for Indian stocks with Supabase/memory caching */
+  async getBatchStockFundamentals(symbols: string[], exchange: Exchange = "NSE"): Promise<StockFundamentals[]> {
+    const cleanSymbols = symbols.map((s) => s.trim().toUpperCase().replace(/\.(NS|BO)$/i, ""));
+    const suffix = exchange === "BSE" ? ".BO" : ".NS";
+    const tickersWithSuffix = cleanSymbols.map((s) => `${s}${suffix}`);
+
+    const cachedMap = await getCachedFundamentals(tickersWithSuffix);
+    const missing: string[] = [];
+    const results: StockFundamentals[] = [];
+
+    for (let i = 0; i < cleanSymbols.length; i++) {
+      const full = tickersWithSuffix[i];
+      const hit = cachedMap.get(full);
+      if (hit) {
+        results.push(hit);
+      } else {
+        missing.push(cleanSymbols[i]);
+      }
+    }
+
+    if (missing.length > 0 && this.provider.getBatchStockFundamentals) {
+      const fresh = await this.provider.getBatchStockFundamentals(missing, exchange);
+      if (fresh.length > 0) {
+        await saveCachedFundamentals(fresh);
+        results.push(...fresh);
+      }
+    }
+
+    return results;
   }
 
   /** Confirms a symbol really trades on the exchange. Returns the canonical listing or null. */

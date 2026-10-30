@@ -433,7 +433,13 @@ export function DashboardClient({ userName, portfolio, initialProfile }: Dashboa
 
         <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b ${s.divider}`}>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Portfolio Overview</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Portfolio Overview</h1>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#4E9F76]/15 text-[#4E9F76] border border-[#4E9F76]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4E9F76] animate-pulse" />
+                LIVE PRICES
+              </span>
+            </div>
             <p className={`text-xs font-mono ${s.muted}`}>
               {firstName}&apos;s portfolio{portfolio.fileName ? ` · ${portfolio.fileName}` : ""}
               {processed ? ` · prices as of ${processed}` : ""}
@@ -508,7 +514,7 @@ export function DashboardClient({ userName, portfolio, initialProfile }: Dashboa
                   <th className="py-2 pr-3 font-semibold">Company</th>
                   <th className="py-2 px-3 font-semibold text-right">Qty</th>
                   <th className="py-2 px-3 font-semibold text-right">Avg Price</th>
-                  <th className="py-2 px-3 font-semibold text-right">Price</th>
+                  <th className="py-2 px-3 font-semibold text-right">Live Price</th>
                   <th className="py-2 px-3 font-semibold text-right">Value</th>
                   <th className="py-2 px-3 font-semibold text-right">P&amp;L</th>
                   <th className="py-2 px-3 font-semibold text-right">Return</th>

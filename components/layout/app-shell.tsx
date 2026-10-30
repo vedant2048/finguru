@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
@@ -20,7 +20,7 @@ const NAV_LINKS = [
   { name: "Alerts", href: "/alerts" },
 ];
 
-const MARKET_TICKERS = [
+const INITIAL_MARKET_TICKERS = [
   { symbol: "NIFTY 50", value: "24,850.20", change: "+0.42%", positive: true },
   { symbol: "SENSEX", value: "81,620.40", change: "+0.38%", positive: true },
   { symbol: "BANK NIFTY", value: "51,280.15", change: "-0.15%", positive: false },
@@ -34,6 +34,37 @@ export function AppShell({ children }: AppShellProps) {
   const { theme, toggleTheme } = useTheme();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [tickers, setTickers] = useState(INITIAL_MARKET_TICKERS);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchLiveFeed() {
+      try {
+        const res = await fetch("/api/market/overview");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.indices) && data.indices.length > 0) {
+          setTickers(
+            data.indices.map((idx: any) => ({
+              symbol: idx.symbol,
+              value: idx.price,
+              change: idx.percent,
+              positive: idx.positive,
+            }))
+          );
+        }
+      } catch {
+        // Retain current tickers on error
+      }
+    }
+
+    fetchLiveFeed();
+    const interval = setInterval(fetchLiveFeed, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const isDark = theme === "dark";
 
@@ -205,9 +236,10 @@ export function AppShell({ children }: AppShellProps) {
             }`}
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#6F6A64] dark:text-[#6F6A64] light:text-[#9E978F]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4E9F76] animate-pulse inline-block" />
             LIVE FEED:
           </span>
-          {MARKET_TICKERS.map((t) => (
+          {tickers.map((t) => (
             <div key={t.symbol} className="flex items-center gap-2">
               <span className="font-semibold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">
                 {t.symbol}

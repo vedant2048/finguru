@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { FinancialLineChart, ValuationBarComparison } from "@/components/ui/financial-charts";
+import type { StockDetailResult } from "@/lib/market-data/types";
 
 interface StockDetailPageProps {
   params: Promise<{ ticker: string }>;
@@ -125,23 +126,109 @@ const DEFAULT_CHART = {
 export default function StockDetailPage({ params }: StockDetailPageProps) {
   const resolvedParams = use(params);
   const ticker = resolvedParams.ticker.toUpperCase();
-  const stock = STOCK_PROFILES[ticker] || {
-    ...STOCK_PROFILES.RELIANCE,
-    ticker: ticker,
-    name: `${ticker} Corporation Ltd`,
-  };
+
+  const [liveStock, setLiveStock] = useState<StockDetailResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "fundamentals" | "valuation" | "news" | "risk"
   >("overview");
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadStock() {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/market/stock/${ticker}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && json.success && json.stock) {
+            setLiveStock(json.stock);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading stock detail:", e);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadStock();
+    return () => {
+      isMounted = false;
+    };
+  }, [ticker]);
+
+  const baseProfile = STOCK_PROFILES[ticker] || {
+    ticker,
+    name: `${ticker} Ltd`,
+    sector: "Equities",
+    exchange: "NSE / BSE",
+    price: "—",
+    change: "0.00",
+    percent: "0.00%",
+    positive: true,
+    marketCap: "—",
+    pe: 22.0,
+    industryPe: 25.0,
+    pb: 2.5,
+    evEbitda: 14.0,
+    peg: 1.5,
+    roe: 14.2,
+    roce: 16.0,
+    debtEquity: 0.35,
+    operatingMargin: "15.0%",
+    eps: "—",
+    revenue: "—",
+    netProfit: "—",
+    news: [
+      {
+        headline: `Quarterly institutional volume and liquidity updates for ${ticker}.`,
+        source: "Market Intelligence Stream",
+        date: "Today",
+        sentiment: "positive",
+        signal: "Volume and benchmark liquidity tracking",
+      },
+    ],
+  };
+
+  const stock = {
+    ...baseProfile,
+    ...(liveStock
+      ? {
+          name: liveStock.name || baseProfile.name,
+          sector: liveStock.sector || baseProfile.sector,
+          exchange: liveStock.exchange || baseProfile.exchange,
+          price: liveStock.price,
+          change: liveStock.change,
+          percent: liveStock.percent,
+          positive: liveStock.positive,
+          marketCap: liveStock.marketCap || baseProfile.marketCap,
+          pe: liveStock.pe ?? baseProfile.pe,
+          pb: liveStock.pb ?? baseProfile.pb,
+          evEbitda: liveStock.evEbitda ?? baseProfile.evEbitda,
+          peg: liveStock.peg ?? baseProfile.peg,
+          roe: liveStock.roe ?? baseProfile.roe,
+          debtEquity: liveStock.debtEquity ?? baseProfile.debtEquity,
+          operatingMargin: liveStock.operatingMargin || baseProfile.operatingMargin,
+          eps: liveStock.eps || baseProfile.eps,
+          revenue: liveStock.revenue || baseProfile.revenue,
+          volume: liveStock.volume,
+        }
+      : {}),
+  };
+
+  const chartData =
+    liveStock?.chart && Object.keys(liveStock.chart).length > 0 && (liveStock.chart["1D"]?.length ?? 0) > 0
+      ? liveStock.chart
+      : DEFAULT_CHART;
 
   return (
     <AppShell>
       <div className="space-y-6">
         {/* Breadcrumb & Navigation */}
         <div className="flex items-center gap-2 text-xs font-mono text-[#A9A39B]">
-          <Link href="/discover" className="hover:underline text-[#3A7BD5]">
-            Discover
+          <Link href="/markets" className="hover:underline text-[#3A7BD5]">
+            Markets
           </Link>
           <span>/</span>
           <span>{stock.sector}</span>
@@ -160,6 +247,12 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
               </span>
               <Badge variant="neutral">{stock.exchange}</Badge>
               <Badge variant="info">{stock.sector}</Badge>
+              {liveStock && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[#4E9F76]/15 text-[#4E9F76] border border-[#4E9F76]/30">
+                  <span className="w-1 h-1 rounded-full bg-[#4E9F76] animate-pulse" />
+                  REAL-TIME
+                </span>
+              )}
             </div>
             <h1 className="text-sm font-medium text-[#A9A39B] dark:text-[#A9A39B] light:text-[#6F6A64]">
               {stock.name}
@@ -215,9 +308,11 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
                 <span className="text-xs font-mono uppercase tracking-wider font-bold text-[#A9A39B]">
                   Price Action Trajectory
                 </span>
-                <Badge variant="positive">VOL: 11.4M</Badge>
+                <Badge variant={stock.positive ? "positive" : "neutral"}>
+                  VOL: {stock.volume || "11.4M"}
+                </Badge>
               </div>
-              <FinancialLineChart data={DEFAULT_CHART} initialTimeframe="1M" height={220} />
+              <FinancialLineChart data={chartData} initialTimeframe="1D" height={220} />
             </div>
 
             {/* Quick Metrics Grid */}
@@ -228,19 +323,19 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
               </div>
               <div className="p-3 rounded border bg-[#181615] border-[#24201D] dark:bg-[#181615] dark:border-[#24201D] light:bg-[#FAF7F2] light:border-[#E8E2D8]">
                 <span className="text-[#A9A39B] block text-[10px]">P/E Ratio</span>
-                <span className="font-bold text-[#4E9F76]">{stock.pe}x</span>
+                <span className="font-bold text-[#4E9F76]">{stock.pe ? `${stock.pe}x` : "—"}</span>
               </div>
               <div className="p-3 rounded border bg-[#181615] border-[#24201D] dark:bg-[#181615] dark:border-[#24201D] light:bg-[#FAF7F2] light:border-[#E8E2D8]">
                 <span className="text-[#A9A39B] block text-[10px]">P/B Ratio</span>
-                <span className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.pb}x</span>
+                <span className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.pb ? `${stock.pb}x` : "—"}</span>
               </div>
               <div className="p-3 rounded border bg-[#181615] border-[#24201D] dark:bg-[#181615] dark:border-[#24201D] light:bg-[#FAF7F2] light:border-[#E8E2D8]">
                 <span className="text-[#A9A39B] block text-[10px]">ROE</span>
-                <span className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.roe}%</span>
+                <span className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.roe ? `${stock.roe}%` : "—"}</span>
               </div>
               <div className="p-3 rounded border bg-[#181615] border-[#24201D] dark:bg-[#181615] dark:border-[#24201D] light:bg-[#FAF7F2] light:border-[#E8E2D8]">
                 <span className="text-[#A9A39B] block text-[10px]">Debt / Equity</span>
-                <span className="font-bold text-[#4E9F76]">{stock.debtEquity}</span>
+                <span className="font-bold text-[#4E9F76]">{stock.debtEquity ?? "—"}</span>
               </div>
               <div className="p-3 rounded border bg-[#181615] border-[#24201D] dark:bg-[#181615] dark:border-[#24201D] light:bg-[#FAF7F2] light:border-[#E8E2D8]">
                 <span className="text-[#A9A39B] block text-[10px]">EPS (TTM)</span>
@@ -261,19 +356,19 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-2">
                 <span className="text-[#A9A39B]">Total Revenue (TTM)</span>
                 <div className="text-lg font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.revenue}</div>
-                <p className="text-[11px] text-[#4E9F76]">+11.4% YoY Expansion</p>
+                <p className="text-[11px] text-[#4E9F76]">Annual Trailing Revenue</p>
               </div>
 
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-2">
-                <span className="text-[#A9A39B]">Net Profit (PAT)</span>
-                <div className="text-lg font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.netProfit}</div>
-                <p className="text-[11px] text-[#4E9F76]">Operating Margin: {stock.operatingMargin}</p>
+                <span className="text-[#A9A39B]">Operating Margin</span>
+                <div className="text-lg font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.operatingMargin}</div>
+                <p className="text-[11px] text-[#4E9F76]">Trailing 12-Month Operating Margin</p>
               </div>
 
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-2">
-                <span className="text-[#A9A39B]">Return on Capital (ROCE)</span>
-                <div className="text-lg font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.roce}%</div>
-                <p className="text-[11px] text-[#6F6A64]">Above cost of debt (8.2%)</p>
+                <span className="text-[#A9A39B]">Return on Equity (ROE)</span>
+                <div className="text-lg font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.roe ? `${stock.roe}%` : "—"}</div>
+                <p className="text-[11px] text-[#6F6A64]">Shareholder capital efficiency</p>
               </div>
             </div>
           </div>
@@ -291,27 +386,20 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
                   Contextual comparisons against peer group averages.
                 </p>
               </div>
-              <Badge variant="positive">BELOW INDUSTRY AVERAGE P/E</Badge>
+              <Badge variant="positive">PE RATIO BENCHMARK</Badge>
             </div>
 
             <div className="space-y-5 max-w-2xl">
               <ValuationBarComparison
                 label="Price to Earnings (P/E)"
-                companyValue={stock.pe}
-                industryValue={stock.industryPe}
-                unit="x"
-                isLowerBetter={true}
-              />
-              <ValuationBarComparison
-                label="EV / EBITDA"
-                companyValue={stock.evEbitda}
-                industryValue={15.2}
+                companyValue={stock.pe || 20}
+                industryValue={stock.industryPe || 25}
                 unit="x"
                 isLowerBetter={true}
               />
               <ValuationBarComparison
                 label="Price to Book (P/B)"
-                companyValue={stock.pb}
+                companyValue={stock.pb || 2.5}
                 industryValue={2.8}
                 unit="x"
                 isLowerBetter={true}
@@ -366,20 +454,20 @@ export default function StockDetailPage({ params }: StockDetailPageProps) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-1">
                 <span className="text-[#A9A39B]">Debt-to-Equity Ratio</span>
-                <div className="text-base font-bold text-[#4E9F76]">{stock.debtEquity}</div>
-                <p className="text-[10px] text-[#6F6A64]">Conservative leverage profile (&lt; 0.5x)</p>
+                <div className="text-base font-bold text-[#4E9F76]">{stock.debtEquity ?? "—"}</div>
+                <p className="text-[10px] text-[#6F6A64]">Leverage profile</p>
               </div>
 
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-1">
-                <span className="text-[#A9A39B]">Interest Coverage Ratio</span>
-                <div className="text-base font-bold text-[#4E9F76]">7.8x</div>
-                <p className="text-[10px] text-[#6F6A64]">Strong operating earnings cushion</p>
+                <span className="text-[#A9A39B]">Volume Activity</span>
+                <div className="text-base font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.volume || "—"}</div>
+                <p className="text-[10px] text-[#6F6A64]">Latest session liquidity</p>
               </div>
 
               <div className="p-4 rounded border border-[#2E2925] dark:border-[#2E2925] light:border-[#E8E2D8] bg-[#181615] dark:bg-[#181615] light:bg-[#FAF7F2] space-y-1">
-                <span className="text-[#A9A39B]">Beta (5-Year Volatility)</span>
-                <div className="text-base font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">0.92</div>
-                <p className="text-[10px] text-[#6F6A64]">Lower volatility than NIFTY benchmark</p>
+                <span className="text-[#A9A39B]">Market Cap</span>
+                <div className="text-base font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.marketCap}</div>
+                <p className="text-[10px] text-[#6F6A64]">Total Enterprise Capitalization</p>
               </div>
             </div>
           </div>

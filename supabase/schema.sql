@@ -140,3 +140,37 @@ CREATE POLICY "portfolio_holdings_owner_all" ON public.portfolio_holdings
     JOIN public.profiles p ON p.user_id = pf.user_id
     WHERE pf.id = portfolio_holdings.portfolio_id AND p.email = auth.jwt() ->> 'email'
   ));
+
+
+-- ─────────────────────────────────────────────────────────────
+-- 6. stock_fundamentals_cache (Yahoo Finance fundamentals cache)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.stock_fundamentals_cache (
+  ticker_with_suffix      TEXT PRIMARY KEY,
+  symbol                  TEXT NOT NULL,
+  exchange                TEXT NOT NULL DEFAULT 'NSE',
+  name                    TEXT,
+  sector                  TEXT,
+  market_cap              NUMERIC(18, 2),
+  trailing_pe             NUMERIC(10, 2),
+  return_on_equity        NUMERIC(10, 4),
+  debt_to_equity          NUMERIC(10, 4),
+  industry_pe             NUMERIC(10, 2),
+  roce                    NUMERIC(10, 4),
+  raw_data                JSONB,
+  updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at              TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '12 hours'
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_fundamentals_symbol ON public.stock_fundamentals_cache (symbol, exchange);
+CREATE INDEX IF NOT EXISTS idx_stock_fundamentals_expires ON public.stock_fundamentals_cache (expires_at);
+
+DROP TRIGGER IF EXISTS trg_stock_fundamentals_updated_at ON public.stock_fundamentals_cache;
+CREATE TRIGGER trg_stock_fundamentals_updated_at BEFORE UPDATE ON public.stock_fundamentals_cache
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.stock_fundamentals_cache ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "stock_fundamentals_public_read" ON public.stock_fundamentals_cache;
+CREATE POLICY "stock_fundamentals_public_read" ON public.stock_fundamentals_cache
+  FOR SELECT USING (true);

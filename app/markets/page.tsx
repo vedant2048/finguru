@@ -1,83 +1,133 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useTransition } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { FinancialLineChart } from "@/components/ui/financial-charts";
-
-const MARKET_INDICES = [
-  { symbol: "NIFTY 50", price: "24,850.20", change: "+104.30", percent: "+0.42%", volume: "312.4M", positive: true },
-  { symbol: "SENSEX", price: "81,620.40", change: "+312.10", percent: "+0.38%", volume: "248.1M", positive: true },
-  { symbol: "BANK NIFTY", price: "51,280.15", change: "-78.40", percent: "-0.15%", volume: "185.6M", positive: false },
-  { symbol: "NIFTY IT", price: "41,920.80", change: "+496.25", percent: "+1.20%", volume: "94.2M", positive: true },
-  { symbol: "NIFTY PHARMA", price: "21,410.50", change: "+85.10", percent: "+0.40%", volume: "62.8M", positive: true },
-];
-
-const MARKET_CHART_DATA = {
-  "1D": [
-    { date: "09:15", value: 24745.9 },
-    { date: "10:30", value: 24790.2 },
-    { date: "11:45", value: 24810.0 },
-    { date: "13:00", value: 24785.4 },
-    { date: "14:15", value: 24830.1 },
-    { date: "15:30", value: 24850.2 },
-  ],
-  "1W": [
-    { date: "Mon", value: 24650 },
-    { date: "Tue", value: 24710 },
-    { date: "Wed", value: 24690 },
-    { date: "Thu", value: 24800 },
-    { date: "Fri", value: 24850 },
-  ],
-  "1M": [
-    { date: "01 Sep", value: 24100 },
-    { date: "08 Sep", value: 24350 },
-    { date: "15 Sep", value: 24200 },
-    { date: "22 Sep", value: 24680 },
-    { date: "28 Sep", value: 24850 },
-  ],
-  "1Y": [
-    { date: "Q3 25", value: 19800 },
-    { date: "Q4 25", value: 21200 },
-    { date: "Q1 26", value: 22400 },
-    { date: "Q2 26", value: 23600 },
-    { date: "Q3 26", value: 24850 },
-  ],
-};
-
-const GAINERS = [
-  { ticker: "TCS", name: "Tata Consultancy Services", price: "₹4,120.10", change: "+₹112.40", percent: "+2.80%", volume: "4.2M", pe: "31.2x" },
-  { ticker: "INFY", name: "Infosys Ltd", price: "₹1,780.25", change: "+₹38.50", percent: "+2.21%", volume: "8.1M", pe: "26.4x" },
-  { ticker: "TECHM", name: "Tech Mahindra Ltd", price: "₹1,560.80", change: "+₹29.10", percent: "+1.90%", volume: "3.5M", pe: "28.1x" },
-  { ticker: "SUNPHARMA", name: "Sun Pharmaceutical", price: "₹1,720.00", change: "+₹24.00", percent: "+1.41%", volume: "2.1M", pe: "34.5x" },
-  { ticker: "RELIANCE", name: "Reliance Industries", price: "₹2,940.50", change: "+₹31.20", percent: "+1.07%", volume: "11.4M", pe: "24.5x" },
-];
-
-const LOSERS = [
-  { ticker: "KOTAKBANK", name: "Kotak Mahindra Bank", price: "₹1,740.20", change: "-₹32.40", percent: "-1.83%", volume: "3.1M", pe: "18.2x" },
-  { ticker: "BAJFINANCE", name: "Bajaj Finance Ltd", price: "₹6,890.00", change: "-₹85.00", percent: "-1.22%", volume: "1.8M", pe: "27.8x" },
-  { ticker: "HDFCBANK", name: "HDFC Bank Ltd", price: "₹1,645.80", change: "-₹14.20", percent: "-0.86%", volume: "14.2M", pe: "19.1x" },
-  { ticker: "TATAMOTORS", name: "Tata Motors Ltd", price: "₹960.50", change: "-₹7.10", percent: "-0.73%", volume: "7.9M", pe: "10.4x" },
-  { ticker: "MARUTI", name: "Maruti Suzuki India", price: "₹12,240.00", change: "-₹62.00", percent: "-0.50%", volume: "0.8M", pe: "26.1x" },
-];
-
-const MOST_ACTIVE = [
-  { ticker: "HDFCBANK", name: "HDFC Bank Ltd", price: "₹1,645.80", change: "-₹14.20", percent: "-0.86%", volume: "14.2M", turnover: "₹2,340 Cr" },
-  { ticker: "RELIANCE", name: "Reliance Industries", price: "₹2,940.50", change: "+₹31.20", percent: "+1.07%", volume: "11.4M", turnover: "₹3,350 Cr" },
-  { ticker: "INFY", name: "Infosys Ltd", price: "₹1,780.25", change: "+₹38.50", percent: "+2.21%", volume: "8.1M", turnover: "₹1,440 Cr" },
-  { ticker: "ICICIBANK", name: "ICICI Bank Ltd", price: "₹1,180.00", change: "+₹4.50", percent: "+0.38%", volume: "6.8M", turnover: "₹802 Cr" },
-];
-
-const FIFTY_TWO_WEEK_HIGH = [
-  { ticker: "TCS", name: "Tata Consultancy Services", price: "₹4,120.10", high: "₹4,120.10", distance: "0.0%", rsi: "68.2" },
-  { ticker: "SUNPHARMA", name: "Sun Pharmaceutical", price: "₹1,720.00", high: "₹1,725.00", distance: "-0.29%", rsi: "64.1" },
-  { ticker: "BHARTIARTL", name: "Bharti Airtel Ltd", price: "₹1,540.00", high: "₹1,552.00", distance: "-0.77%", rsi: "71.0" },
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import type { IndexQuote, MarketStockItem, ChartDataPoint } from "@/lib/market-data/types";
+import { RefreshCw, Search } from "lucide-react";
 
 export default function MarketsPage() {
   const [selectedTab, setSelectedTab] = useState<"gainers" | "losers" | "active" | "52whigh">("gainers");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<MarketStockItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const [indices, setIndices] = useState<IndexQuote[]>([]);
+  const [chartData, setChartData] = useState<Record<string, ChartDataPoint[]>>({});
+  const [gainers, setGainers] = useState<MarketStockItem[]>([]);
+  const [losers, setLosers] = useState<MarketStockItem[]>([]);
+  const [mostActive, setMostActive] = useState<MarketStockItem[]>([]);
+  const [fiftyTwoWeekHigh, setFiftyTwoWeekHigh] = useState<MarketStockItem[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [, startTransition] = useTransition();
+
+  const fetchOverview = useCallback(async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/market/overview");
+      if (!res.ok) throw new Error("Failed to fetch market overview");
+      const data = await res.json();
+      if (data.success) {
+        startTransition(() => {
+          setIndices(data.indices || []);
+          setChartData(data.chart || {});
+          setGainers(data.gainers || []);
+          setLosers(data.losers || []);
+          setMostActive(data.mostActive || []);
+          setFiftyTwoWeekHigh(data.fiftyTwoWeekHigh || []);
+          if (data.updatedAt) {
+            const date = new Date(data.updatedAt);
+            setLastUpdated(date.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: false }) + " IST");
+          }
+        });
+      }
+    } catch (err) {
+      console.error("[MarketsPage] fetch overview error:", err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOverview();
+    // Auto-refresh every 45 seconds
+    const interval = setInterval(() => {
+      fetchOverview();
+    }, 45000);
+    return () => clearInterval(interval);
+  }, [fetchOverview]);
+
+  // Live search effect (debounced)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/market/search?q=${encodeURIComponent(q)}`);
+        const json = await res.json();
+        if (isMounted && json.success) {
+          setSearchResults(json.results || []);
+        }
+      } catch (err) {
+        console.error("[MarketsPage] Search error:", err);
+      } finally {
+        if (isMounted) setIsSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  // Determine which list to render
+  const getActiveTabList = () => {
+    switch (selectedTab) {
+      case "gainers":
+        return gainers;
+      case "losers":
+        return losers;
+      case "active":
+        return mostActive;
+      case "52whigh":
+        return fiftyTwoWeekHigh;
+      default:
+        return gainers;
+    }
+  };
+
+  const activeList = getActiveTabList();
+
+  // If query is present, check if filtered locally or use backend search results
+  const isSearchActive = searchQuery.trim().length > 0;
+  const filteredLocalList = isSearchActive
+    ? activeList.filter(
+      (s) =>
+        s.ticker.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    : activeList;
+
+  const displayStocks = isSearchActive
+    ? filteredLocalList.length > 0
+      ? filteredLocalList
+      : searchResults
+    : activeList;
 
   return (
     <AppShell>
@@ -85,51 +135,80 @@ export default function MarketsPage() {
         {/* Market Workspace Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#24201D] dark:border-[#24201D] light:border-[#E8E2D8]">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              Market Intelligence
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Market Intelligence
+              </h1>
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#4E9F76]/15 text-[#4E9F76] border border-[#4E9F76]/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4E9F76] animate-pulse" />
+                LIVE
+              </span>
+            </div>
             <p className="text-xs text-[#A9A39B] dark:text-[#A9A39B] light:text-[#6F6A64]">
-              Real-time index feeds, benchmark movements, and sector volume activity.
+              Real-time index feeds, benchmark movements, and sector volume activity powered by Yahoo Finance.
             </p>
           </div>
 
-          {/* Quick Search */}
-          <div className="w-full sm:w-72">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search index or stock ticker..."
-              className="w-full h-9 px-3 rounded border text-xs font-mono outline-none transition-colors bg-[#151312] border-[#24201D] text-[#FAF7F2] focus:border-[#3A7BD5] placeholder-[#6F6A64] dark:bg-[#151312] dark:border-[#24201D] dark:text-[#FAF7F2] light:bg-[#FFFFFF] light:border-[#DDD5C9] light:text-[#171514]"
-            />
+          {/* Quick Search & Refresh */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search index or stock ticker..."
+                className="w-full h-9 pl-8 pr-3 rounded border text-xs font-mono outline-none transition-colors bg-[#151312] border-[#24201D] text-[#FAF7F2] focus:border-[#3A7BD5] placeholder-[#6F6A64] dark:bg-[#151312] dark:border-[#24201D] dark:text-[#FAF7F2] light:bg-[#FFFFFF] light:border-[#DDD5C9] light:text-[#171514]"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#6F6A64]" />
+            </div>
+
+            <button
+              onClick={() => fetchOverview(true)}
+              disabled={isRefreshing}
+              title="Refresh real-time market data"
+              className="h-9 px-3 rounded border border-[#24201D] bg-[#151312] hover:bg-[#1F1C1B] text-[#A9A39B] hover:text-[#FAF7F2] transition-colors flex items-center gap-1.5 text-xs font-mono cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#3A7BD5]" : ""}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
         </div>
 
         {/* Top Indices Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {MARKET_INDICES.map((index) => (
-            <div
-              key={index.symbol}
-              className="p-4 rounded border transition-colors bg-[#151312] border-[#24201D] dark:bg-[#151312] dark:border-[#24201D] light:bg-[#FFFFFF] light:border-[#E8E2D8] space-y-1 font-mono"
-            >
-              <div className="flex justify-between items-center text-xs text-[#A9A39B] dark:text-[#A9A39B] light:text-[#6F6A64]">
-                <span className="font-bold">{index.symbol}</span>
-                <span className="text-[10px]">VOL: {index.volume}</span>
-              </div>
-              <div className="text-base font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">
-                {index.price}
-              </div>
+          {isLoading
+            ? Array.from({ length: 5 }).map((_, i) => (
               <div
-                className={`text-[11px] font-semibold ${
-                  index.positive
-                    ? "text-[#4E9F76] dark:text-[#4E9F76] light:text-[#2E8555]"
-                    : "text-[#D9534F] dark:text-[#D9534F] light:text-[#C0392B]"
-                }`}
+                key={i}
+                className="p-4 rounded border bg-[#151312] border-[#24201D] dark:bg-[#151312] dark:border-[#24201D] light:bg-[#FFFFFF] light:border-[#E8E2D8] space-y-2"
               >
-                {index.change} ({index.percent})
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-28" />
+                <Skeleton className="h-3 w-20" />
               </div>
-            </div>
-          ))}
+            ))
+            : indices.slice(0, 5).map((index) => (
+              <div
+                key={index.symbol}
+                className="p-4 rounded border transition-colors bg-[#151312] border-[#24201D] dark:bg-[#151312] dark:border-[#24201D] light:bg-[#FFFFFF] light:border-[#E8E2D8] space-y-1 font-mono"
+              >
+                <div className="flex justify-between items-center text-xs text-[#A9A39B] dark:text-[#A9A39B] light:text-[#6F6A64]">
+                  <span className="font-bold">{index.symbol}</span>
+                  <span className="text-[10px] uppercase font-semibold text-[#6F6A64]">{index.volume}</span>
+                </div>
+                <div className="text-base font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">
+                  {index.price}
+                </div>
+                <div
+                  className={`text-[11px] font-semibold ${index.positive
+                      ? "text-[#4E9F76] dark:text-[#4E9F76] light:text-[#2E8555]"
+                      : "text-[#D9534F] dark:text-[#D9534F] light:text-[#C0392B]"
+                    }`}
+                >
+                  {index.change} ({index.percent})
+                </div>
+              </div>
+            ))}
         </div>
 
         {/* Benchmark Chart Area */}
@@ -140,9 +219,22 @@ export default function MarketsPage() {
                 NIFTY 50 Benchmark Intraday &amp; Historical Trajectory
               </span>
             </div>
-            <Badge variant="info">SESSION: ACTIVE</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="info">SESSION: LIVE</Badge>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-[#6F6A64]">
+                  AS OF {lastUpdated}
+                </span>
+              )}
+            </div>
           </div>
-          <FinancialLineChart data={MARKET_CHART_DATA} initialTimeframe="1D" height={220} currencyPrefix="" />
+          {isLoading || !chartData["1D"] ? (
+            <div className="h-[220px] flex items-center justify-center">
+              <Skeleton className="h-full w-full" />
+            </div>
+          ) : (
+            <FinancialLineChart data={chartData} initialTimeframe="1D" height={220} currencyPrefix="" />
+          )}
         </div>
 
         {/* Dense Financial Tables & Tabs */}
@@ -157,12 +249,14 @@ export default function MarketsPage() {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setSelectedTab(tab.id as any)}
-                  className={`px-3 py-1.5 rounded text-xs font-mono font-medium transition-colors cursor-pointer ${
-                    selectedTab === tab.id
+                  onClick={() => {
+                    setSelectedTab(tab.id as any);
+                    setSearchQuery("");
+                  }}
+                  className={`px-3 py-1.5 rounded text-xs font-mono font-medium transition-colors cursor-pointer ${selectedTab === tab.id && !isSearchActive
                       ? "bg-[#211F1D] text-[#FAF7F2] border border-[#2E2925] dark:bg-[#211F1D] dark:text-[#FAF7F2] light:bg-[#ECE8E1] light:text-[#171514]"
                       : "text-[#A9A39B] hover:text-[#FAF7F2] dark:text-[#A9A39B] dark:hover:text-[#FAF7F2] light:text-[#6F6A64] light:hover:text-[#171514]"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -170,7 +264,7 @@ export default function MarketsPage() {
             </div>
 
             <span className="text-[11px] font-mono text-[#A9A39B]">
-              UPDATED EVERY 15 SECONDS
+              {isSearching ? "SEARCHING..." : lastUpdated ? `UPDATED: ${lastUpdated}` : "AUTO-REFRESH 45S"}
             </span>
           </div>
 
@@ -183,22 +277,77 @@ export default function MarketsPage() {
                   <th className="py-2.5 px-3 font-semibold uppercase text-right">Price</th>
                   <th className="py-2.5 px-3 font-semibold uppercase text-right">Change</th>
                   <th className="py-2.5 px-3 font-semibold uppercase text-right">Change %</th>
-                  <th className="py-2.5 px-3 font-semibold uppercase text-right">Volume</th>
+                  <th className="py-2.5 px-3 font-semibold uppercase text-right">
+                    {selectedTab === "52whigh" ? "52W High / Dist" : "Volume / Turnover"}
+                  </th>
                   <th className="py-2.5 px-3 font-semibold uppercase text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#24201D]/40 dark:divide-[#24201D]/40 light:divide-[#E8E2D8]">
-                {selectedTab === "gainers" &&
-                  GAINERS.map((stock) => (
-                    <tr key={stock.ticker} className="hover:bg-[#181615] dark:hover:bg-[#181615] light:hover:bg-[#FAF7F2]">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="border-b border-[#24201D]/40">
+                      <td className="py-3 px-3"><Skeleton className="h-4 w-32" /></td>
+                      <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                      <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                      <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-14 ml-auto" /></td>
+                      <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                      <td className="py-3 px-3 text-right"><Skeleton className="h-6 w-20 ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : displayStocks.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-xs text-[#A9A39B]">
+                      {isSearchActive ? `No stocks found matching "${searchQuery}"` : "No market data available"}
+                    </td>
+                  </tr>
+                ) : (
+                  displayStocks.map((stock) => (
+                    <tr
+                      key={stock.ticker}
+                      className="hover:bg-[#181615] dark:hover:bg-[#181615] light:hover:bg-[#FAF7F2] transition-colors"
+                    >
                       <td className="py-3 px-3">
-                        <div className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.ticker}</div>
-                        <div className="text-[11px] text-[#A9A39B]">{stock.name}</div>
+                        <div className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">
+                          {stock.ticker}
+                        </div>
+                        <div className="text-[11px] text-[#A9A39B] truncate max-w-[220px]">
+                          {stock.name}
+                        </div>
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.price}</td>
-                      <td className="py-3 px-3 text-right text-[#4E9F76] font-semibold">{stock.change}</td>
-                      <td className="py-3 px-3 text-right text-[#4E9F76] font-semibold">{stock.percent}</td>
-                      <td className="py-3 px-3 text-right text-[#A9A39B]">{stock.volume}</td>
+                      <td className="py-3 px-3 text-right font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">
+                        {stock.price}
+                      </td>
+                      <td
+                        className={`py-3 px-3 text-right font-semibold ${stock.positive ? "text-[#4E9F76]" : "text-[#D9534F]"
+                          }`}
+                      >
+                        {stock.change}
+                      </td>
+                      <td
+                        className={`py-3 px-3 text-right font-semibold ${stock.positive ? "text-[#4E9F76]" : "text-[#D9534F]"
+                          }`}
+                      >
+                        {stock.percent}
+                      </td>
+                      <td className="py-3 px-3 text-right text-[#A9A39B]">
+                        {selectedTab === "52whigh" && stock.high52 ? (
+                          <div>
+                            <div>{stock.high52}</div>
+                            <span className="text-[10px] text-[#6F6A64]">{stock.distance52} from High</span>
+                          </div>
+                        ) : selectedTab === "active" && stock.turnover ? (
+                          <div>
+                            <div>{stock.turnover}</div>
+                            <span className="text-[10px] text-[#6F6A64]">Vol: {stock.volume}</span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div>{stock.volume}</div>
+                            {stock.pe && <span className="text-[10px] text-[#6F6A64]">PE: {stock.pe}</span>}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-right">
                         <Link
                           href={`/stocks/${stock.ticker}`}
@@ -208,73 +357,8 @@ export default function MarketsPage() {
                         </Link>
                       </td>
                     </tr>
-                  ))}
-
-                {selectedTab === "losers" &&
-                  LOSERS.map((stock) => (
-                    <tr key={stock.ticker} className="hover:bg-[#181615] dark:hover:bg-[#181615] light:hover:bg-[#FAF7F2]">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.ticker}</div>
-                        <div className="text-[11px] text-[#A9A39B]">{stock.name}</div>
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.price}</td>
-                      <td className="py-3 px-3 text-right text-[#D9534F] font-semibold">{stock.change}</td>
-                      <td className="py-3 px-3 text-right text-[#D9534F] font-semibold">{stock.percent}</td>
-                      <td className="py-3 px-3 text-right text-[#A9A39B]">{stock.volume}</td>
-                      <td className="py-3 px-3 text-right">
-                        <Link
-                          href={`/stocks/${stock.ticker}`}
-                          className="px-2.5 py-1 rounded border border-[#2E2925] text-[#3A7BD5] hover:bg-[#3A7BD5] hover:text-white transition-colors"
-                        >
-                          Analysis &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-
-                {selectedTab === "active" &&
-                  MOST_ACTIVE.map((stock) => (
-                    <tr key={stock.ticker} className="hover:bg-[#181615] dark:hover:bg-[#181615] light:hover:bg-[#FAF7F2]">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.ticker}</div>
-                        <div className="text-[11px] text-[#A9A39B]">{stock.name}</div>
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.price}</td>
-                      <td className="py-3 px-3 text-right font-semibold">{stock.change}</td>
-                      <td className="py-3 px-3 text-right font-semibold">{stock.percent}</td>
-                      <td className="py-3 px-3 text-right text-[#A9A39B]">{stock.volume} ({stock.turnover})</td>
-                      <td className="py-3 px-3 text-right">
-                        <Link
-                          href={`/stocks/${stock.ticker}`}
-                          className="px-2.5 py-1 rounded border border-[#2E2925] text-[#3A7BD5] hover:bg-[#3A7BD5] hover:text-white transition-colors"
-                        >
-                          Analysis &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-
-                {selectedTab === "52whigh" &&
-                  FIFTY_TWO_WEEK_HIGH.map((stock) => (
-                    <tr key={stock.ticker} className="hover:bg-[#181615] dark:hover:bg-[#181615] light:hover:bg-[#FAF7F2]">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.ticker}</div>
-                        <div className="text-[11px] text-[#A9A39B]">{stock.name}</div>
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-[#FAF7F2] dark:text-[#FAF7F2] light:text-[#171514]">{stock.price}</td>
-                      <td className="py-3 px-3 text-right text-[#4E9F76] font-semibold">High: {stock.high}</td>
-                      <td className="py-3 px-3 text-right text-[#A9A39B] font-semibold">{stock.distance} from High</td>
-                      <td className="py-3 px-3 text-right text-[#A9A39B]">RSI: {stock.rsi}</td>
-                      <td className="py-3 px-3 text-right">
-                        <Link
-                          href={`/stocks/${stock.ticker}`}
-                          className="px-2.5 py-1 rounded border border-[#2E2925] text-[#3A7BD5] hover:bg-[#3A7BD5] hover:text-white transition-colors"
-                        >
-                          Analysis &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

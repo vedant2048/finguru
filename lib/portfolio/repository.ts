@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { PortfolioAnalysis } from "@/lib/ai/portfolioAnalysis";
+import { getMarketDataService } from "@/lib/market-data";
 import { PortfolioError } from "./errors";
 import type {
   AnalysisStatus,
@@ -301,7 +302,7 @@ export async function getCompletedPortfolio(userId: string, portfolioId?: number
   const sectorAllocation = (p.sector_allocation ?? []) as SectorAllocation[];
   const largest = active[0];
 
-  return {
+  const stored: StoredPortfolio = {
     id: p.id,
     fileName: p.source_file_name,
     processedAt: p.processed_at,
@@ -326,4 +327,110 @@ export async function getCompletedPortfolio(userId: string, portfolioId?: number
         : null,
     },
   };
+
+  return await refreshPortfolioLivePrices(stored);
+}
+
+
+export async function refreshPortfolioLivePrices(portfolio: StoredPortfolio): Promise<StoredPortfolio> {
+  if (!portfolio.holdings || portfolio.holdings.length === 0) return portfolio;
+
+  try {
+    const market = getMarketDataService();
+    const quotes = await market.mapLimited(portfolio.holdings, async (h) => {
+      try {
+        return await market.getQuote(h.symbol, h.exchange);
+      } catch {
+        return null;
+      }
+    });
+
+    let anyUpdated = false;
+    const updatedHoldings = portfolio.holdings.map((h, i) => {
+      const q = quotes[i];
+      if (!q || !q.currentPrice || q.currentPrice <= 0) return h;
+      anyUpdated = true;
+
+      const currentPrice = q.currentPrice;
+      const currentValue = h.quantity * currentPrice;
+      const profitLoss = currentValue - h.investedValue;
+      const returnPercentage = h.investedValue > 0 ? (profitLoss / h.investedValue) * 100 : null;
+
+      return {
+        ...h,
+        currentPrice,
+        priceSource: "market" as const,
+        currentValue,
+        profitLoss,
+        returnPercentage,
+        market: {
+          currency: q.currency,
+          previousClose: q.previousClose,
+          marketCap: q.marketCap,
+          pe: q.pe,
+          eps: q.eps,
+          week52High: q.week52High,
+          week52Low: q.week52Low,
+          volume: q.volume,
+          sector: q.sector,
+          industry: q.industry,
+          dividendYield: q.dividendYield,
+          asOf: q.asOf,
+        },
+      };
+    });
+
+    if (!anyUpdated) return portfolio;
+
+    const totalInvested = portfolio.summary.totalInvested;
+    const totalCurrentValue = updatedHoldings.reduce((sum, h) => sum + h.currentValue, 0);
+    const totalProfitLoss = totalCurrentValue - totalInvested;
+    const totalReturnPercentage = totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : null;
+
+    const withAlloc = updatedHoldings.map((h) => ({
+      ...h,
+      allocationPercentage: totalCurrentValue > 0 ? (h.currentValue / totalCurrentValue) * 100 : 0,
+    }));
+
+    const sectorMap = new Map<string, { currentValue: number; count: number }>();
+    for (const h of withAlloc) {
+      const sec = h.sector || "Unclassified";
+      const curr = sectorMap.get(sec) || { currentValue: 0, count: 0 };
+      curr.currentValue += h.currentValue;
+      curr.count += 1;
+      sectorMap.set(sec, curr);
+    }
+    const sectorAllocation: SectorAllocation[] = [...sectorMap.entries()]
+      .map(([sector, s]) => ({
+        sector,
+        currentValue: s.currentValue,
+        allocationPercentage: totalCurrentValue > 0 ? (s.currentValue / totalCurrentValue) * 100 : 0,
+        holdingsCount: s.count,
+      }))
+      .sort((a, b) => b.currentValue - a.currentValue);
+
+    const largest = withAlloc.slice().sort((a, b) => b.currentValue - a.currentValue)[0];
+
+    return {
+      ...portfolio,
+      holdings: withAlloc,
+      sectorAllocation,
+      summary: {
+        totalInvested,
+        totalCurrentValue,
+        totalProfitLoss,
+        totalReturnPercentage,
+        holdingsCount: withAlloc.length,
+        largestHolding: largest
+          ? { symbol: largest.symbol, company: largest.company, allocationPercentage: largest.allocationPercentage }
+          : null,
+        largestSector: sectorAllocation[0]
+          ? { sector: sectorAllocation[0].sector, allocationPercentage: sectorAllocation[0].allocationPercentage }
+          : null,
+      },
+    };
+  } catch (err) {
+    console.warn("[portfolio-repo] Live price refresh error:", err);
+    return portfolio;
+  }
 }

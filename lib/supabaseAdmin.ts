@@ -16,6 +16,12 @@ export function getSupabaseAdmin(): SupabaseClient {
           autoRefreshToken: false,
           persistSession: false,
         },
+        global: {
+          fetch: (url, options) => {
+            const timeoutSignal = AbortSignal.timeout(2000);
+            return fetch(url, { ...options, signal: timeoutSignal });
+          },
+        },
       }
     );
   }
